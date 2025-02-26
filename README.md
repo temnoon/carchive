@@ -1,6 +1,6 @@
-# Carchive2
+# Carchive
 
-Carchive2 is a modern conversation archiving and analysis system designed to store, organize, search, and analyze text-based conversations using vector embeddings and AI.
+Carchive is a modern conversation archiving and analysis system designed to store, organize, search, and analyze text-based conversations using vector embeddings and AI.
 
 ## Features
 

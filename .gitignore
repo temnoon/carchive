@@ -46,7 +46,7 @@ htmlcov/
 chat/*
 !chat/.gitkeep
 facebook-temnoon-2025-01-30-4w69iQe0/
-facebook-temnoon-2025-01-30-4w69iQe0.zip
+*.zip
 
 # Output directories - excluding test outputs
 output/
@@ -82,4 +82,4 @@ Thumbs.db
 # Keep SQL migrations
 !alembic/versions/*.sql
 !alembic/versions/*.py
-!scripts/*.sql
+!scripts/*.sqlchat/chat.html

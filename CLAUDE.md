@@ -1,4 +1,4 @@
-# CLAUDE.md - carchive2 Development Guide
+# CLAUDE.md - carchive Development Guide
 
 ## Build and Run Commands
 - Setup: `poetry install`
