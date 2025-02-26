@@ -1,0 +1,100 @@
+{% extends 'layout.html' %}
+
+{% block title %}View Media{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-md-12">
+      <nav aria-label="breadcrumb" class="my-3">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('media.list_media') }}">Media</a></li>
+          <li class="breadcrumb-item active" aria-current="page">View Media</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+  
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Media Details</h5>
+        <div>
+          <a href="#" class="btn btn-outline-primary">Download</a>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill"></i> 
+        This is a placeholder template for media viewing while the feature is being implemented.
+      </div>
+      
+      <div class="row">
+        <div class="col-md-8">
+          <!-- Media preview area -->
+          <div class="card bg-light mb-3">
+            <div class="card-body text-center p-5">
+              <i class="bi bi-image" style="font-size: 6rem;"></i>
+              <p class="mt-3">Media preview will be displayed here</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <!-- Media metadata -->
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">Metadata</h6>
+            </div>
+            <div class="card-body">
+              <table class="table table-sm">
+                <tbody>
+                  <tr>
+                    <th scope="row">Filename</th>
+                    <td>sample_image.jpg</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Type</th>
+                    <td>image/jpeg</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Size</th>
+                    <td>1.2 MB</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Uploaded</th>
+                    <td>February 25, 2025</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Dimensions</th>
+                    <td>1920 × 1080</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Related Conversations -->
+          <div class="card mt-3">
+            <div class="card-header">
+              <h6 class="mb-0">Related Conversations</h6>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item px-0">
+                  <a href="#" class="text-decoration-none">Conversation Title 1</a>
+                  <div class="small text-muted">February 24, 2025</div>
+                </li>
+                <li class="list-group-item px-0">
+                  <a href="#" class="text-decoration-none">Conversation Title 2</a>
+                  <div class="small text-muted">February 23, 2025</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

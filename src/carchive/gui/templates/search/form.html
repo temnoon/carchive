@@ -1,0 +1,111 @@
+{% extends 'layout.html' %}
+
+{% block title %}Search{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="my-4">Search</h1>
+  
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Search Archives</h5>
+    </div>
+    <div class="card-body">
+      <form action="{{ url_for('search.search_results') }}" method="get">
+        <div class="mb-3">
+          <label for="search-query" class="form-label">Search Query</label>
+          <input type="text" class="form-control form-control-lg" id="search-query" name="q" placeholder="Enter your search query..." required>
+          <div class="form-text">
+            Search for conversations, messages, or media content.
+          </div>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="form-floating">
+              <select class="form-select" id="search-type" name="type">
+                <option value="all" selected>All Content Types</option>
+                <option value="conversations">Conversations</option>
+                <option value="messages">Messages</option>
+                <option value="media">Media</option>
+              </select>
+              <label for="search-type">Content Type</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-floating">
+              <select class="form-select" id="search-date-range" name="date_range">
+                <option value="all" selected>All Time</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+                <option value="year">Last Year</option>
+              </select>
+              <label for="search-date-range">Date Range</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-floating">
+              <select class="form-select" id="search-sort" name="sort">
+                <option value="relevance" selected>Most Relevant</option>
+                <option value="date_desc">Newest First</option>
+                <option value="date_asc">Oldest First</option>
+              </select>
+              <label for="search-sort">Sort By</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-header">Advanced Options</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="semantic-search" name="semantic" value="1" checked>
+                  <label class="form-check-label" for="semantic-search">Enable Semantic Search</label>
+                </div>
+                <div class="form-text">Use vector embeddings for more accurate results.</div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="exact-match" name="exact" value="1">
+                  <label class="form-check-label" for="exact-match">Exact Match</label>
+                </div>
+                <div class="form-text">Only return exact matches for the query.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center">
+          <button type="submit" class="btn btn-primary btn-lg">Search</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">Recent Searches</h5>
+    </div>
+    <div class="card-body">
+      <div class="list-group">
+        <a href="{{ url_for('search.search_results') }}?q=sample+query+1" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <span>sample query 1</span>
+          <span class="badge bg-secondary rounded-pill">2 days ago</span>
+        </a>
+        <a href="{{ url_for('search.search_results') }}?q=sample+query+2" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <span>sample query 2</span>
+          <span class="badge bg-secondary rounded-pill">1 week ago</span>
+        </a>
+        <a href="{{ url_for('search.search_results') }}?q=sample+query+3" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <span>sample query 3</span>
+          <span class="badge bg-secondary rounded-pill">2 weeks ago</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ conversation.title or 'Untitled Conversation' }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{{ conversation.title or 'Untitled Conversation' }}</h2>
+                <div>
+                    <a href="{{ url_for('conversations.list_conversations') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Conversations
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if api_error %}
+                    <div class="alert alert-warning mb-4">
+                        <h4 class="alert-heading">API Connection Issue</h4>
+                        <p>{{ error_message }}</p>
+                        <hr>
+                        <p class="mb-0">Please ensure the API server is running at port 5000. You can try restarting the servers with <code>./restart_servers.sh</code></p>
+                    </div>
+                {% endif %}
+                
+                <div class="conversation-metadata mb-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ conversation.created_at|datetime if conversation.created_at else 'Unknown' }}</p>
+                            <p><strong>Updated:</strong> {{ conversation.updated_at|datetime if conversation.updated_at else 'Unknown' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Model:</strong> {{ conversation.model or 'Unknown' }}</p>
+                            <p><strong>Messages:</strong> {{ pagination.total if pagination is defined and pagination.total is defined else '0' }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if messages is defined and messages %}
+                    <div class="conversation-messages">
+                        {% for message in messages %}
+                            <div class="message-container mb-4 {% if message.role == 'user' %}message-user{% else %}message-assistant{% endif %}">
+                                <div class="message-header d-flex justify-content-between align-items-center py-2 px-3 rounded-top {% if message.role == 'user' %}bg-primary text-white{% else %}bg-secondary text-white{% endif %}">
+                                    <div>
+                                        <strong>{{ message.role|title }}</strong>
+                                    </div>
+                                    <div>
+                                        <small>{{ message.created_at|datetime if message.created_at is defined else 'Unknown' }}</small>
+                                    </div>
+                                </div>
+                                <div class="message-content p-3 border border-top-0 rounded-bottom">
+                                    {{ message.content|safe }}
+                                    
+                                    {% if message.media_items %}
+                                        <div class="message-media mt-3">
+                                            <h5>Media:</h5>
+                                            <div class="row">
+                                                {% for media in message.media_items %}
+                                                    <div class="col-md-3 mb-3">
+                                                        <a href="{{ url_for('media.view_media', media_id=media.id) }}" class="media-thumbnail">
+                                                            <img src="{{ url_for('media.thumbnail', media_id=media.id) }}" alt="{{ media.filename }}" class="img-thumbnail">
+                                                            <div class="mt-1 small text-truncate">{{ media.filename }}</div>
+                                                        </a>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if pagination is defined and pagination.pages > 1 %}
+                        <nav aria-label="Message pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if pagination.page > 1 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('conversations.view_conversation', conversation_id=conversation.id, page=pagination.page-1, per_page=pagination.per_page) }}">
+                                            Previous
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">Previous</span>
+                                    </li>
+                                {% endif %}
+                                
+                                {# Calculate page range manually instead of using max/min functions #}
+                                {% set start_page = pagination.page - 2 if pagination.page - 2 > 0 else 1 %}
+                                {% set end_page = pagination.page + 2 if pagination.page + 2 < pagination.pages else pagination.pages %}
+                                
+                                {% for page_num in range(start_page, end_page + 1) %}
+                                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('conversations.view_conversation', conversation_id=conversation.id, page=page_num, per_page=pagination.per_page) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                                
+                                {% if pagination.page < pagination.pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('conversations.view_conversation', conversation_id=conversation.id, page=pagination.page+1, per_page=pagination.per_page) }}">
+                                            Next
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">Next</span>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-info">
+                        No messages found in this conversation.
+                    </div>
+                    
+                    {% if api_error %}
+                        <!-- Sample conversation for development purposes -->
+                        <div class="mt-4 p-3 border rounded bg-light">
+                            <h5>Sample Messages (UI Development Only)</h5>
+                            <div class="conversation-messages">
+                                <div class="message-container mb-4 message-user">
+                                    <div class="message-header d-flex justify-content-between align-items-center py-2 px-3 rounded-top bg-primary text-white">
+                                        <div><strong>User</strong></div>
+                                        <div><small>2023-05-15 14:30</small></div>
+                                    </div>
+                                    <div class="message-content p-3 border border-top-0 rounded-bottom">
+                                        Can you explain how vector embeddings work in the context of language models?
+                                    </div>
+                                </div>
+                                
+                                <div class="message-container mb-4 message-assistant">
+                                    <div class="message-header d-flex justify-content-between align-items-center py-2 px-3 rounded-top bg-secondary text-white">
+                                        <div><strong>Assistant</strong></div>
+                                        <div><small>2023-05-15 14:31</small></div>
+                                    </div>
+                                    <div class="message-content p-3 border border-top-0 rounded-bottom">
+                                        <p>Vector embeddings are numerical representations of words, phrases, or entire documents in a high-dimensional space. Here's how they work in language models:</p>
+                                        
+                                        <ol>
+                                            <li><strong>Dimensionality:</strong> Each word or token is represented as a vector typically with hundreds of dimensions (e.g., 768 or 1024 dimensions).</li>
+                                            <li><strong>Semantic meaning:</strong> The vectors capture semantic relationships, where similar words have vectors that are closer together in the vector space.</li>
+                                            <li><strong>Context awareness:</strong> Modern embeddings capture contextual meaning, so the same word in different contexts has different vectors.</li>
+                                        </ol>
+                                        
+                                        <p>These embeddings enable many NLP tasks:</p>
+                                        <ul>
+                                            <li>Semantic search</li>
+                                            <li>Document similarity</li>
+                                            <li>Classification</li>
+                                            <li>Clustering</li>
+                                        </ul>
+                                        
+                                        <p>Would you like me to explain more about how these embeddings are actually generated?</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-muted small">This sample data is only shown when the API is unavailable.</div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.message-container {
+    max-width: 100%;
+}
+.message-user {
+    margin-left: 0;
+    margin-right: 20%;
+}
+.message-assistant {
+    margin-left: 20%;
+    margin-right: 0;
+}
+.message-content {
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,12 @@
+# environment.yml
+name: carchi
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - postgresql
+  - psycopg2
+  - libpq
+  - pip:
+      - poetry==1.5.1 # or latest stable Poetry

@@ -1,0 +1,31 @@
+# Core dependencies for Python environment (pip-compatible format)
+# Explicitly pin pydantic to v1 - the project requires this version
+pydantic==1.10.21
+# Note: We'll handle settings compatibility separately in the code
+# DON'T install pydantic-settings as it requires pydantic v2
+
+# Database dependencies
+psycopg2>=2.9,<2.10
+pgvector>=0.1.7,<0.2.0
+sqlalchemy>=2.0,<2.1
+greenlet>=2.0,<3.0  # Required by SQLAlchemy for async support
+
+# Web and API dependencies
+flask==2.2.5
+flask-cors>=3.0,<4.0
+uvicorn==0.17.6
+requests>=2.31.0
+jinja2>=3.0.0  # For templating
+
+# CLI dependencies
+typer>=0.7,<0.8
+click>=8.0.0  # Required by typer
+rich>=13.0.0  # For better CLI output
+
+# Security and configuration
+keyring>=23.0,<24.0
+python-dotenv>=1.0,<2.0
+
+# Content processing
+markdown>=3.4,<3.8
+pymdown-extensions>=10.0.0

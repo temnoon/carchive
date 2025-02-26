@@ -1,0 +1,287 @@
+{% extends "layout.html" %}
+
+{% block title %}CLI Commands - {{ app_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .command-output {
+        background-color: #2c2c2c;
+        color: white;
+        font-family: monospace;
+        padding: 15px;
+        border-radius: 5px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .command-card {
+        transition: transform 0.2s;
+    }
+    
+    .command-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h2 class="mb-0"><i class="fas fa-terminal me-2"></i>CLI Command Dashboard</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    Run CLI commands directly from the web interface. Select a command from the list below or enter a custom command.
+                </p>
+                
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h3 class="mb-0">Command Execution</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="commandForm" class="mb-3">
+                                <div class="mb-3">
+                                    <label for="commandInput" class="form-label">Command</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">carchive</span>
+                                        <input type="text" class="form-control" id="commandInput" placeholder="search -q example">
+                                        <button type="submit" class="btn btn-primary">Execute</button>
+                                    </div>
+                                    <div class="form-text">Enter a command to execute, e.g., "search -q example" or "media analyze-media-distribution"</div>
+                                </div>
+                            </form>
+                            
+                            <div class="mt-4" id="outputContainer" style="display: none;">
+                                <h4>Output</h4>
+                                <div class="command-output" id="commandOutput"></div>
+                                <div class="mt-2 text-end">
+                                    <button class="btn btn-sm btn-outline-secondary" id="copyOutput">
+                                        <i class="fas fa-copy me-1"></i> Copy
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" id="clearOutput">
+                                        <i class="fas fa-trash me-1"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">Available Commands</h3>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="commandsAccordion">
+                    {% for command in commands %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" 
+                                        aria-controls="collapse{{ loop.index }}">
+                                    <strong>{{ command.name }}</strong>
+                                    {% if command.help %}
+                                    <span class="ms-3 text-muted small">{{ command.help }}</span>
+                                    {% endif %}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" 
+                                 aria-labelledby="heading{{ loop.index }}" data-bs-parent="#commandsAccordion">
+                                <div class="accordion-body">
+                                    {% if command.subcommands is defined %}
+                                        <h5>Subcommands</h5>
+                                        <div class="row">
+                                            {% for subcommand in command.subcommands %}
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="card command-card h-100">
+                                                        <div class="card-body">
+                                                            <h5 class="card-title">{{ command.name }} {{ subcommand.name }}</h5>
+                                                            <p class="card-text">{{ subcommand.help }}</p>
+                                                            <div class="mt-auto">
+                                                                <button class="btn btn-sm btn-outline-primary run-command" 
+                                                                        data-command="{{ command.name }} {{ subcommand.name }}">
+                                                                    Run Command
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="card command-card">
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ command.name }}</h5>
+                                                <p class="card-text">{{ command.help }}</p>
+                                                {% if command.params %}
+                                                    <h6>Parameters</h6>
+                                                    <ul>
+                                                        {% for param in command.params %}
+                                                            <li>
+                                                                <strong>{{ param.name }}</strong>
+                                                                {% if not param.required %} (optional){% endif %}
+                                                                {% if param.default and param.default != "..." %} - default: {{ param.default }}{% endif %}
+                                                                <br>
+                                                                <small class="text-muted">{{ param.help }}</small>
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                                <div class="mt-3">
+                                                    <button class="btn btn-sm btn-outline-primary run-command" 
+                                                            data-command="{{ command.name }}">
+                                                        Run Command
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const commandForm = document.getElementById('commandForm');
+        const commandInput = document.getElementById('commandInput');
+        const commandOutput = document.getElementById('commandOutput');
+        const outputContainer = document.getElementById('outputContainer');
+        const copyOutputBtn = document.getElementById('copyOutput');
+        const clearOutputBtn = document.getElementById('clearOutput');
+        const runCommandBtns = document.querySelectorAll('.run-command');
+        
+        // Handle form submission
+        commandForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            executeCommand(commandInput.value);
+        });
+        
+        // Handle run command buttons
+        runCommandBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const command = this.getAttribute('data-command');
+                commandInput.value = command;
+                executeCommand(command);
+            });
+        });
+        
+        // Clear output
+        clearOutputBtn.addEventListener('click', function() {
+            commandOutput.innerHTML = '';
+            outputContainer.style.display = 'none';
+        });
+        
+        // Copy output
+        copyOutputBtn.addEventListener('click', function() {
+            const text = commandOutput.textContent;
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    // Create a temporary notification
+                    const notification = document.createElement('div');
+                    notification.classList.add('position-fixed', 'bottom-0', 'end-0', 'p-3');
+                    notification.innerHTML = `
+                        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="toast-header">
+                                <strong class="me-auto">Notification</strong>
+                                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                            <div class="toast-body">
+                                Output copied to clipboard!
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(notification);
+                    
+                    // Remove after 3 seconds
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 3000);
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                });
+        });
+        
+        // Execute command function
+        function executeCommand(command) {
+            if (!command.trim()) {
+                return;
+            }
+            
+            // Show loading state
+            commandOutput.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Executing command...</div>';
+            outputContainer.style.display = 'block';
+            
+            // Send the command to the API
+            fetch('/cli/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'command=' + encodeURIComponent(command)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the output
+                let outputHtml = '';
+                
+                if (data.success) {
+                    if (data.stdout) {
+                        outputHtml += `<div class="mb-2">${formatOutput(data.stdout)}</div>`;
+                    }
+                    
+                    if (data.stderr) {
+                        outputHtml += `<div class="text-danger mb-2">${formatOutput(data.stderr)}</div>`;
+                    }
+                    
+                    outputHtml += `<div class="text-success"><i class="fas fa-check-circle"></i> Command completed with exit code ${data.exit_code}</div>`;
+                } else {
+                    outputHtml = `<div class="text-danger"><i class="fas fa-exclamation-circle"></i> Error: ${data.error}</div>`;
+                    if (data.details) {
+                        outputHtml += `<div class="text-danger mt-2">${formatOutput(data.details)}</div>`;
+                    }
+                }
+                
+                commandOutput.innerHTML = outputHtml;
+            })
+            .catch(error => {
+                commandOutput.innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</div>`;
+            });
+        }
+        
+        // Format output function
+        function formatOutput(text) {
+            if (!text) return '';
+            
+            // Escape HTML
+            const escaped = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+            
+            // Replace newlines with <br>
+            return escaped.replace(/\n/g, '<br>');
+        }
+    });
+</script>
+{% endblock %}

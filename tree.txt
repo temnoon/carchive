@@ -1,0 +1,68 @@
+(carchive2) tem@MacBookPro carchive2 % tree
+.
+├── environment.yml
+├── poetry.lock
+├── pyproject.toml
+├── src
+│   └── carchive2
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   └── __init__.cpython-310.pyc
+│       ├── agents
+│       │   ├── __pycache__
+│       │   │   ├── base.cpython-310.pyc
+│       │   │   ├── manager.cpython-310.pyc
+│       │   │   └── openai_agent.cpython-310.pyc
+│       │   ├── antropic_agent.py
+│       │   ├── base.py
+│       │   ├── local_agent.py
+│       │   ├── manager.py
+│       │   ├── nomic_text_embed_agent.py
+│       │   ├── ollama_agent.py
+│       │   └── openai_agent.py
+│       ├── cli
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-310.pyc
+│       │   │   ├── collection_cli.cpython-310.pyc
+│       │   │   ├── embed_cli.cpython-310.pyc
+│       │   │   ├── ingestion_cli.cpython-310.pyc
+│       │   │   ├── main_cli.cpython-310.pyc
+│       │   │   └── search_cli.cpython-310.pyc
+│       │   ├── cli.py
+│       │   ├── collection_cli.py
+│       │   ├── embed_cli.py
+│       │   ├── ingestion_cli.py
+│       │   ├── main_cli.py
+│       │   └── search_cli.py
+│       ├── core
+│       │   ├── __pycache__
+│       │   │   ├── config.cpython-310.pyc
+│       │   │   └── utils.cpython-310.pyc
+│       │   ├── config.py
+│       │   ├── settings.py
+│       │   └── utils.py
+│       ├── database
+│       │   ├── __pycache__
+│       │   │   ├── engine.cpython-310.pyc
+│       │   │   ├── models.cpython-310.pyc
+│       │   │   └── session.cpython-310.pyc
+│       │   ├── engine.py
+│       │   ├── models.py
+│       │   ├── schemas.py
+│       │   └── session.py
+│       ├── embeddings
+│       │   ├── __pycache__
+│       │   │   └── embed.cpython-310.pyc
+│       │   └── embed.py
+│       ├── ingestion
+│       │   ├── __pycache__
+│       │   │   └── ingest.cpython-310.pyc
+│       │   └── ingest.py
+│       └── search
+│           ├── __pycache__
+│           │   └── search.cpython-310.pyc
+│           └── search.py
+└── tree.txt
+
+18 directories, 47 files

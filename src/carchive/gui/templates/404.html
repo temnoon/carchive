@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block title %}404 Not Found - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card text-center">
+            <div class="card-header bg-danger text-white">
+                <h2 class="mb-0">404 Not Found</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">The page you're looking for doesn't exist.</p>
+                <img src="https://http.cat/404" alt="404 Cat" class="img-fluid mb-3" style="max-height: 300px;">
+                <div class="mt-4">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i> Go to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

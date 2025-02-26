@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+
+{% block title %}Home - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">Welcome to {{ app_name }}</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    This web interface allows you to explore your chat archive database. Browse conversations, 
+                    search for messages, view media files, and more.
+                </p>
+                
+                <div class="mt-4">
+                    <h3>API Status</h3>
+                    {% if api_status %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i> API is online (version {{ api_info.version }})
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i> API is offline: {{ api_info.error }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if api_status %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">Conversations</h3>
+            </div>
+            <div class="card-body text-center">
+                <h4 class="display-4">{{ stats.conversations|default('0') }}</h4>
+                <p>Total conversations in database</p>
+                <a href="{{ url_for('conversations.list_conversations') }}" class="btn btn-primary">Browse</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">Messages</h3>
+            </div>
+            <div class="card-body text-center">
+                <h4 class="display-4">{{ stats.messages|default('0') }}</h4>
+                <p>Total messages in database</p>
+                <a href="{{ url_for('messages.list_messages') }}" class="btn btn-primary">Browse</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h3 class="mb-0">Media</h3>
+            </div>
+            <div class="card-body text-center">
+                <h4 class="display-4">{{ stats.media|default('0') }}</h4>
+                <p>Total media files in database</p>
+                <a href="{{ url_for('media.list_media') }}" class="btn btn-primary">Browse</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h3 class="mb-0">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('search.search_form') }}" class="btn btn-lg btn-outline-primary w-100">
+                            <i class="fas fa-search me-2"></i> Search
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('cli.cli_dashboard') }}" class="btn btn-lg btn-outline-secondary w-100">
+                            <i class="fas fa-terminal me-2"></i> CLI Commands
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('main.about') }}" class="btn btn-lg btn-outline-info w-100">
+                            <i class="fas fa-info-circle me-2"></i> About
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

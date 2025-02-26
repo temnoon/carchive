@@ -1,0 +1,170 @@
+{% extends 'layout.html' %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-md-12">
+      <nav aria-label="breadcrumb" class="my-3">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('search.search_form') }}">Search</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Results</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+  
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Search Results for "{{ query }}"</h5>
+        <div>
+          <form class="d-flex" action="{{ url_for('search.search_results') }}" method="get">
+            <input class="form-control me-2" type="search" name="q" placeholder="Search again..." value="{{ query }}" aria-label="Search">
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill"></i> 
+        This is a placeholder template for search results. In a real implementation, actual search results from the database would be displayed here.
+      </div>
+      
+      <!-- Filters -->
+      <div class="row mb-4">
+        <div class="col">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">Filters</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <label class="form-label">Content Type</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="filter-all" checked>
+                    <label class="form-check-label" for="filter-all">
+                      All Types
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="filter-conversations">
+                    <label class="form-check-label" for="filter-conversations">
+                      Conversations
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="filter-messages">
+                    <label class="form-check-label" for="filter-messages">
+                      Messages
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="filter-media">
+                    <label class="form-check-label" for="filter-media">
+                      Media
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Date Range</label>
+                  <select class="form-select">
+                    <option selected>All Time</option>
+                    <option>Last 24 Hours</option>
+                    <option>Last 7 Days</option>
+                    <option>Last 30 Days</option>
+                    <option>Last Year</option>
+                    <option>Custom Range</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Sort By</label>
+                  <select class="form-select">
+                    <option selected>Relevance</option>
+                    <option>Date (Newest First)</option>
+                    <option>Date (Oldest First)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Search Results -->
+      <h5>Found 25 Results</h5>
+      
+      <!-- Result Items -->
+      <div class="list-group mb-4">
+        <!-- Conversation Result -->
+        <div class="list-group-item">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">
+              <i class="bi bi-chat-dots text-primary me-2"></i>
+              <a href="#">Sample Conversation</a>
+            </h5>
+            <small class="text-muted">3 days ago</small>
+          </div>
+          <p class="mb-1">This is a sample conversation with content matching the query "<strong>{{ query }}</strong>". The matching text would be highlighted in the actual search results.</p>
+          <small class="text-muted">10 messages • Last activity: February 22, 2025</small>
+        </div>
+        
+        <!-- Message Result -->
+        <div class="list-group-item">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">
+              <i class="bi bi-chat-text text-success me-2"></i>
+              <a href="#">Message in Sample Conversation</a>
+            </h5>
+            <small class="text-muted">2 days ago</small>
+          </div>
+          <p class="mb-1">This is a sample message with content matching the query "<strong>{{ query }}</strong>". The matching text would be highlighted in the actual search results.</p>
+          <small class="text-muted">From: User • Conversation: <a href="#">Sample Conversation</a></small>
+        </div>
+        
+        <!-- Media Result -->
+        <div class="list-group-item">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">
+              <i class="bi bi-image text-warning me-2"></i>
+              <a href="#">sample_image.jpg</a>
+            </h5>
+            <small class="text-muted">1 day ago</small>
+          </div>
+          <div class="row align-items-center">
+            <div class="col-md-2">
+              <div class="bg-light p-2 text-center rounded">
+                <i class="bi bi-image" style="font-size: 2rem;"></i>
+              </div>
+            </div>
+            <div class="col-md-10">
+              <p class="mb-1">Media file with metadata matching "<strong>{{ query }}</strong>". This could be a filename, description, or extracted text content.</p>
+              <small class="text-muted">Type: image/jpeg • Size: 1.2 MB • In message: <a href="#">Message in Sample Conversation</a></small>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pagination -->
+      <nav aria-label="Search results pagination">
+        <ul class="pagination justify-content-center">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+          </li>
+          <li class="page-item active" aria-current="page">
+            <a class="page-link" href="#">1</a>
+          </li>
+          <li class="page-item"><a class="page-link" href="#">2</a></li>
+          <li class="page-item"><a class="page-link" href="#">3</a></li>
+          <li class="page-item">
+            <a class="page-link" href="#">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}

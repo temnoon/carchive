@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment and config
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.dump
+
+# Logs
+*.log
+
+# Large data and chat files
+chat/conversations.json
+chat/*.png
+chat/*.jpg
+chat/*.jpeg
+chat/*.webp
+chat/file-*
+chat/dalle-generations/
+facebook-temnoon-2025-01-30-4w69iQe0/
+facebook-temnoon-2025-01-30-4w69iQe0.zip
+output/
+output_tests/
+my_output/
+my_outputs/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.ropeproject
+
+# Editor specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Keep SQL migrations
+!alembic/versions/*.sql
+!alembic/versions/*.py
+!scripts/*.sql

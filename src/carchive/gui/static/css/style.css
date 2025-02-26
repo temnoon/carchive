@@ -1,0 +1,79 @@
+/* Custom styles for carchive2 Explorer */
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+.footer {
+    flex-shrink: 0;
+}
+
+/* Card styles */
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    font-weight: bold;
+}
+
+/* Message display */
+.message-card {
+    margin-bottom: 15px;
+}
+
+.message-user {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+}
+
+.message-assistant {
+    background-color: #f0f7ff;
+    border-left: 4px solid #28a745;
+}
+
+.message-system {
+    background-color: #f0f0f0;
+    border-left: 4px solid #6c757d;
+}
+
+/* Media display */
+.media-thumbnail {
+    max-height: 150px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.media-full {
+    max-width: 100%;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Pagination */
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Search highlighting */
+.highlight {
+    background-color: yellow;
+    padding: 2px;
+    border-radius: 2px;
+}

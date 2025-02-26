@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "carchive"
+version = "0.1.0"
+description = "A chat archival and semantic search system with pgvector"
+authors = ["Tem Noon <tem@temnoon.com>"]
+license = "MIT"
+packages = [{ include = "carchive", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+# Pydantic <2.0 for broad compatibility
+pydantic = ">=1.10,<2.0"
+sqlalchemy = ">=2.0,<2.1"
+psycopg2 = ">=2.9,<2.10"
+typer = ">=0.7,<0.8"
+pgvector = ">=0.1.7,<0.2.0" # Correct package name
+# API and Web UI dependencies
+flask = ">=2.2,<2.3"
+flask-cors = ">=3.0,<4.0"
+uvicorn = ">=0.17,<0.18"
+markdown = ">=3.4,<3.8" # for markdown processing
+# Added dependencies for new requirements
+greenlet = ">=2.0,<3.0"
+keyring = ">=23.0,<24.0"
+python-dotenv = ">=1.0,<2.0"
+scikit-learn = "^1.6.1"
+
+[tool.poetry.scripts]
+carchive = "carchive.cli.main_cli:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.2,<8.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

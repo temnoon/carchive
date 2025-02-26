@@ -1,0 +1,86 @@
+{% extends 'layout.html' %}
+
+{% block title %}Media Files{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="my-4">Media Files</h1>
+  
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Media Library</h5>
+        <div>
+          <form class="d-flex" role="search">
+            <input class="form-control me-2" type="search" placeholder="Search media" aria-label="Search">
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill"></i> 
+        Media content will be displayed here. This is a placeholder template while the feature is being implemented.
+      </div>
+      
+      <div class="row row-cols-1 row-cols-md-3 g-4">
+        <!-- Sample media items (placeholders) -->
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <i class="bi bi-image" style="font-size: 3rem;"></i>
+              <h5 class="card-title mt-3">Sample Image</h5>
+              <p class="card-text text-muted">image/jpeg • 1.2 MB</p>
+            </div>
+            <div class="card-footer">
+              <small class="text-muted">Uploaded on Feb 25, 2025</small>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <i class="bi bi-file-pdf" style="font-size: 3rem;"></i>
+              <h5 class="card-title mt-3">Sample Document</h5>
+              <p class="card-text text-muted">application/pdf • 2.5 MB</p>
+            </div>
+            <div class="card-footer">
+              <small class="text-muted">Uploaded on Feb 24, 2025</small>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <i class="bi bi-filetype-json" style="font-size: 3rem;"></i>
+              <h5 class="card-title mt-3">Sample Data</h5>
+              <p class="card-text text-muted">application/json • 15 KB</p>
+            </div>
+            <div class="card-footer">
+              <small class="text-muted">Uploaded on Feb 23, 2025</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pagination -->
+      <nav aria-label="Media pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+          </li>
+          <li class="page-item active" aria-current="page">
+            <a class="page-link" href="#">1</a>
+          </li>
+          <li class="page-item"><a class="page-link" href="#">2</a></li>
+          <li class="page-item"><a class="page-link" href="#">3</a></li>
+          <li class="page-item">
+            <a class="page-link" href="#">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}

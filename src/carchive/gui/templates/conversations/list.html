@@ -1,0 +1,153 @@
+{% extends "layout.html" %}
+
+{% block title %}Conversations - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">Conversations</h2>
+                <form class="d-flex" method="get">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Filter by title" name="title" value="{{ title_filter }}">
+                        <button class="btn btn-light" type="submit">Filter</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-body">
+                {% if conversations is defined %}
+                    {% if conversations %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Messages</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for convo in conversations %}
+                                        <tr>
+                                            <td>
+                                                <a href="{{ url_for('conversations.view_conversation', conversation_id=convo.id) }}">
+                                                    {{ convo.title or 'Untitled Conversation' }}
+                                                </a>
+                                            </td>
+                                            <td>{{ convo.message_count if convo.message_count is defined else '?' }}</td>
+                                            <td>{{ convo.created_at|datetime if convo.created_at is defined else 'Unknown' }}</td>
+                                            <td>
+                                                <a href="{{ url_for('conversations.view_conversation', conversation_id=convo.id) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% if pagination is defined and pagination.pages > 1 %}
+                            <nav aria-label="Pagination" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if pagination.page > 1 %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('conversations.list_conversations', page=pagination.page-1, per_page=pagination.per_page, title=title_filter, sort=sort_by, order=sort_order) }}">
+                                                Previous
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">Previous</span>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {# Calculate page range manually instead of using max/min functions #}
+                                    {% set start_page = pagination.page - 2 if pagination.page - 2 > 0 else 1 %}
+                                    {% set end_page = pagination.page + 2 if pagination.page + 2 < pagination.pages else pagination.pages %}
+                                    
+                                    {% for page_num in range(start_page, end_page + 1) %}
+                                        <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                            <a class="page-link" href="{{ url_for('conversations.list_conversations', page=page_num, per_page=pagination.per_page, title=title_filter, sort=sort_by, order=sort_order) }}">
+                                                {{ page_num }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                    
+                                    {% if pagination.page < pagination.pages %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('conversations.list_conversations', page=pagination.page+1, per_page=pagination.per_page, title=title_filter, sort=sort_by, order=sort_order) }}">
+                                                Next
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">Next</span>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No conversations found. {% if title_filter %}Try adjusting your filter.{% endif %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        <h4 class="alert-heading">API Connection Issue</h4>
+                        <p>Unable to retrieve conversations from the API server. Please ensure that:</p>
+                        <ul>
+                            <li>The API server is running on port 5000</li>
+                            <li>The database is properly configured</li>
+                            <li>API endpoints are responding correctly</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-0">You can try restarting the API server with <code>./restart_servers.sh</code></p>
+                    </div>
+                    
+                    <!-- Sample conversations for UI development -->
+                    <div class="mt-4 p-3 border rounded bg-light">
+                        <h5>Sample Data (UI Development Only)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Messages</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><a href="#">Sample Conversation 1</a></td>
+                                        <td>14</td>
+                                        <td>2023-05-15 14:32</td>
+                                        <td><button class="btn btn-sm btn-primary" disabled><i class="fas fa-eye"></i> View</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="#">Deep Dive on Neural Networks</a></td>
+                                        <td>27</td>
+                                        <td>2023-05-12 09:15</td>
+                                        <td><button class="btn btn-sm btn-primary" disabled><i class="fas fa-eye"></i> View</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="#">Project Planning Session</a></td>
+                                        <td>8</td>
+                                        <td>2023-05-09 16:45</td>
+                                        <td><button class="btn btn-sm btn-primary" disabled><i class="fas fa-eye"></i> View</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-muted small">This sample data is only shown when the API is unavailable.</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}About - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">About {{ app_name }}</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    {{ app_name }} is a web interface for exploring and analyzing chat archives.
+                </p>
+                
+                <h3 class="mt-4">Features</h3>
+                <ul>
+                    <li>Browse conversations and messages</li>
+                    <li>View and download media files</li>
+                    <li>Search for content across the archive</li>
+                    <li>Execute CLI commands through the web interface</li>
+                    <li>Analyze conversation statistics</li>
+                </ul>
+                
+                <h3 class="mt-4">Technology Stack</h3>
+                <ul>
+                    <li>Backend: Python, Flask, SQLAlchemy</li>
+                    <li>Frontend: Bootstrap 5, JavaScript</li>
+                    <li>Database: PostgreSQL with pgvector</li>
+                </ul>
+                
+                <div class="mt-4 text-center">
+                    <a href="https://github.com/anthropics/claude-code" class="btn btn-outline-primary">
+                        <i class="fab fa-github me-2"></i> View on GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{
+  "text_query": "phenomenology",
+  "meta_filters": {
+    "role": "Assistant"
+  },
+  "top_k": 10
+}

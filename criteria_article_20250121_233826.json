@@ -1,0 +1,7 @@
+{
+  "text_query": "article",
+  "meta_filters": {
+    "role": "assistant"
+  },
+  "top_k": 100000
+}

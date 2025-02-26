@@ -1,0 +1,239 @@
+Below is a high-level map of the main classes, modules, and methods across the carchive2 codebase, along with where they live, what they enable, and how they’re typically used. This gives a bird’s-eye view for anyone intending to build a more optimized CLI, a Node.js/TypeScript interface, or a Flask-based UI.
+
+1. Agents (Embedding/Chat)
+
+Where: carchive2/agents/
+
+1.1 BaseAgent
+	•	File: carchive2/agents/base.py
+	•	Purpose: An abstract base class (ABC) defining two core methods:
+	•	generate_embedding(text: str) -> List[float]
+	•	chat(prompt: str, context: Optional[str] = None) -> str
+	•	Used By: Other agent classes (OpenAIAgent, OllamaAgent, etc.) must implement these methods.
+	•	Imported In: manager.py and other modules needing to instantiate an agent.
+
+1.2 Specific Agent Implementations
+	•	OpenAIAgent (openai_agent.py):
+	•	Implements the base methods using the OpenAI API (openai.Embedding.create and openai.ChatCompletion.create).
+	•	Uses Pydantic for response validation (OpenAIEmbeddingResponse, etc.).
+	•	NomicTextEmbedAgent (nomic_text_embed_agent.py):
+	•	Hits a local (or remote) Ollama server for “nomic-embed-text” embeddings.
+	•	Validates responses with a small Pydantic model (NomicEmbeddingResponse).
+	•	OllamaAgent & OllamaChatAgent:
+	•	Connect to an Ollama server for either embeddings or chat completions.
+	•	Llama32TextAgent (llama32_text_agent.py):
+	•	A specialized local agent for text completions using a “3B” Llama model, but currently no embedding support.
+
+Key Takeaway:
+Agents let you pick which embedding or chat model to use. AgentManager can return the appropriate agent instance given a provider name.
+
+2. AgentManager
+
+Where: carchive2/agents/manager.py
+	•	Class: AgentManager
+	•	Purpose:
+	•	Provides a simple get_agent(provider: str) -> BaseAgent method that returns an instance of the correct agent class (OpenAI, Ollama, etc.).
+	•	Pulls in config values like API keys from carchive2.core.config.
+	•	Usage:
+	•	Often used by embedding routines or chat endpoints. The CLI might say --provider openai, then the code calls AgentManager().get_agent("openai") to fetch OpenAIAgent.
+
+3. Database Models & Session
+
+Where: carchive2/database/
+
+3.1 models.py
+	•	Classes:
+	•	Conversation: Holds conversation-level data (title, meta_info, etc.).
+	•	Message: Tied to a conversation; stores text content & meta_info.
+	•	Chunk: Optional splits of large messages.
+	•	Embedding: Vector data from pgvector, referencing a message or chunk.
+	•	Collection / CollectionItem: Grouping objects for sets of messages/chunks.
+	•	Relationships:
+	•	Conversation ←→ Message, Message ←→ Chunk, Collection ←→ CollectionItem.
+	•	Used By:
+	•	Ingestion, search, collections, rendering, etc.
+
+3.2 session.py
+	•	Function: get_session()
+	•	A context manager that yields a SQLAlchemy session:
+
+with get_session() as session:
+    # do DB operations
+
+
+	•	Used By:
+	•	All modules that need DB access (search, ingestion, etc.).
+
+4. Ingestion (Importers)
+
+Where:
+	•	carchive2/ingestion/ingest.py
+	•	(Legacy or partial) ingestion/ingest_old.py
+
+4.1 ingest_file(...)
+	•	Logic:
+	•	Detect JSON vs. ZIP file.
+	•	Parse out conversations/messages (and potentially attachments).
+	•	Insert them into the DB with session logic.
+	•	Schemas:
+	•	ConversationEntry & RawMessage (simple Pydantic models) validate partial JSON structures.
+	•	Possible Future:
+	•	Reorganize into an importers/ folder with a BaseImporter if you want specialized importers for ChatGPT, Facebook, etc.
+
+Usage:
+	•	By the CLI command carchive ingest file <path> or in scripts that want to import chat data.
+
+5. Search
+
+Where: carchive2/search/search.py
+
+5.1 Functions
+	•	search_conversations(query, limit) → returns [ConversationRead]
+	•	search_messages(query, limit) → returns [MessageRead]
+	•	search_messages_with_conversation(query, limit) → returns [MessageWithConversationRead]
+	•	A specialized joined query that yields both message + minimal conversation info in a Pydantic model.
+	•	vector_search(anchor_vector, top_k) → returns a list of Embedding SQLAlchemy objects.
+	•	create_collection_from_vector(name, anchor_vector, top_k) → creates a new Collection based on the top-k embeddings.
+
+5.2 Pydantic “Read” Models
+	•	MessageRead, ConversationRead, etc. in carchive2/schemas/db_objects.py.
+	•	Ensures typed data is returned from DB queries.
+
+Used By:
+	•	The CLI (search_cli.py subcommands).
+	•	Potential future frontends or APIs for searching.
+
+6. Embeddings
+
+Where: carchive2/embeddings/
+
+6.1 embed.py
+	•	Function: embed_text(text, provider, model_version)
+	•	Creates an agent via AgentManager, generates an embedding, stores in DB.
+
+6.2 embed_manager.py
+	•	Class: EmbeddingManager
+	•	Method: embed_texts(request_data: EmbeddingRequestSchema) -> List[EmbeddingResultSchema]
+	•	More flexible: can embed raw text or references to a message/ chunk.
+
+Used By:
+	•	The CLI (embed_cli.py).
+	•	Possibly advanced search pipelines that want to generate embeddings on the fly.
+
+7. Collections
+
+Where: carchive2/collections/
+
+7.1 collection_manager.py
+	•	create_collection(...): Takes CollectionCreateSchema and persists a new Collection + items.
+	•	update_collection, list_collections, etc.: Basic DB operations for collections.
+	•	create_collection_from_dbobjects(...): Accepts a heterogeneous list of Pydantic objects (e.g. messages, conversations) and auto-creates CollectionItems pointing to them.
+
+7.2 schemas.py
+	•	CollectionCreateSchema, CollectionItemSchema: Pydantic definitions for building/updating collections.
+
+Used By:
+	•	The CLI subcommands for collections (create, list, render).
+	•	Potentially other modules that want to group sets of messages or embeddings.
+
+8. Rendering
+
+Where: carchive2/collections/render_engine.py + carchive2/rendering/conversation_renderer.py
+
+8.1 render_collection_to_html(...)
+	•	Iterates over each CollectionItem, loads the relevant Message or Chunk, and produces styled HTML.
+	•	Optionally includes conversation metadata or message metadata.
+
+8.2 render_conversation_to_html(...)
+	•	Similar approach, but for a single conversation.
+
+Used By:
+	•	The CLI commands (collection_cli.py, render_cli.py) for HTML exports.
+	•	Could be reused or extended in a future pipeline for PDF or more advanced export.
+
+9. CLI
+
+Where: carchive2/cli/
+
+9.1 Subcommand Modules
+	•	ingestion_cli.py → carchive ingest file <path>
+	•	search_cli.py → carchive search messages <query>, etc.
+	•	embed_cli.py → carchive embed text "<some text>"
+	•	collection_cli.py → carchive collection create --name ...
+	•	render_cli.py → carchive render conversation ...
+
+9.2 Aggregation
+	•	main_cli.py
+	•	Combines all subcommands into a single Typer app (main_app).
+
+Used By:
+	•	Developer or user command line.
+	•	Eventually, you could replicate these calls in a Node/TypeScript environment or a Flask route if you want an HTTP interface.
+
+10. (Potential) Pipeline Code
+
+Where: carchive2/pipelines/
+	•	search_pipeline.py → A SearchPipeline class that can chain steps for advanced multi-stage filtering or ranking.
+	•	steps/ folder (if used) might hold small classes like TextFilterStep, MetaFilterStep, EmbeddingStep, etc.
+
+Why:
+This is optional if you want advanced AI or multi-criteria searches. Each step is a mini “transform” that receives and returns data or lists of Pydantic objects.
+
+11. How These Components Can Expose an API or GUI
+
+Because each domain (ingestion, search, embeddings, etc.) is handled in a separate Python module or manager, you can do any of the following:
+	1.	Node.js / TypeScript
+	•	Write a small wrapper that calls Python code via:
+	•	Subprocess (call the CLI commands).
+	•	Directly if you embed a Python server and call it via HTTP or an IPC mechanism.
+	•	Then your Node app can pass requests (like “search for messages” or “ingest this file”) to carchive2.
+	2.	Flask or FastAPI
+	•	You can create an API that calls these manager classes.
+	•	For instance, a Flask route /api/search/messages?query=foo could internally do:
+
+results = search_messages(query="foo", limit=10)
+return jsonify([r.dict() for r in results])
+
+
+	•	Another route /api/conversation/render?id=XYZ could call render_conversation_to_html.
+
+	3.	GUI
+	•	If you build a React, Vue, or Svelte front-end, it can talk to the Flask/Node API endpoints.
+	•	The logic for searching, embedding, or rendering remains in Python, only the user interface moves to the JavaScript side.
+	4.	MCP or Another AI Protocol
+	•	Because your code is already modular (especially if you keep the CLI thin), hooking into an external protocol (e.g., Anthropic’s MCP) is mostly about bridging the method calls.
+
+12. Ideal Architecture for the Future
+	1.	Core “Service” Classes
+	•	Agents, Database Models, Ingestion, Search, and Collections remain the stable core.
+	•	They are manager-based or pipeline-based so that logic is in Python, not the CLI or UI code.
+	2.	Decoupled CLI
+	•	The CLI is simply a front-end to these managers. If you want to present a second interface (a Flask server or a Node-based GraphQL API), you just wrap the same managers.
+	3.	Unified Data Models
+	•	Pydantic read schemas for external consumption.
+	•	Pydantic create/update schemas for ingestion and collection creation.
+	•	Clear boundaries ensure data is validated at each step.
+	4.	Optional Pipeline Steps
+	•	For advanced search or exporting, you chain “steps” that transform or filter data. The final result can be turned into a collection or returned to the user.
+	5.	API or Node Integration
+	•	Build a REST or GraphQL interface calling the same manager methods.
+	•	The front-end (React, Vue, or a native mobile app) calls those endpoints, letting users do ingestion, search, embedding, or exporting from a browser or separate GUI.
+
+Summary
+	•	Modules & Classes:
+	•	Agents → Provide either embedding or chat endpoints.
+	•	Database → SQLAlchemy models + session. Ties everything to PostgreSQL.
+	•	Ingestion → A function or potential “BaseImporter” for reading archives.
+	•	Search → Functions returning Pydantic “read” models. Possibly pipeline-based.
+	•	Embeddings → Agent-based embedding, stored in the embeddings table.
+	•	Collections → A manager and schemas to group messages/chunks.
+	•	Rendering → HTML output for collections or conversations.
+	•	CLI → Typer-based commands for each domain.
+
+Everything is modular so you can easily wrap it in:
+	•	CLI (already done),
+	•	Flask (simple route layer calling the same managers),
+	•	Node (call the Python code or an HTTP API),
+	•	or any other automation layer.
+
+This big-picture structure ensures carchive2 can scale from a local CLI ingestion tool to a multi-user server-based app with a GUI, while reusing the same manager classes and Pydantic models for reliability and consistency.
