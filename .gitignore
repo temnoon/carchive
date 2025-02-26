@@ -42,20 +42,26 @@ htmlcov/
 # Logs
 *.log
 
-# Large data and chat files
-chat/conversations.json
-chat/*.png
-chat/*.jpg
-chat/*.jpeg
-chat/*.webp
-chat/file-*
-chat/dalle-generations/
+# Large data and chat files - excluding personal data
+chat/*
+!chat/.gitkeep
 facebook-temnoon-2025-01-30-4w69iQe0/
 facebook-temnoon-2025-01-30-4w69iQe0.zip
+
+# Output directories - excluding test outputs
 output/
+!output/.gitkeep
 output_tests/
+!output_tests/.gitkeep
 my_output/
+!my_output/.gitkeep
 my_outputs/
+!my_outputs/.gitkeep
+
+# Test data
+tests/test_data/
+!tests/test_data/.gitkeep
+!tests/test_data/test_image.jpg
 
 # OS specific
 .DS_Store
