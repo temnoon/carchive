@@ -26,3 +26,4 @@ class EmbeddingRequestSchema(BaseModel):
 class EmbeddingResultSchema(BaseModel):
     db_id: uuid.UUID
     vector: List[float]
+    stored: bool = True

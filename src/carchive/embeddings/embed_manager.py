@@ -27,47 +27,160 @@ class EmbeddingManager:
         """
         agent = AgentManager().get_embedding_agent(request_data.provider or DEFAULT_EMBEDDING_PROVIDER)
         results = []
+        
+        # Check for empty targets
+        if not request_data.targets:
+            logger.warning("No targets provided for embedding")
+            return results
+            
         with get_session() as session:
+            # Process targets and generate embeddings
+            embedding_objects = []
+            
             for t in request_data.targets:
-                if t.text is not None:
-                    vector = agent.generate_embedding(t.text)
-                    emb_obj = Embedding(
-                        id=uuid.uuid4(),
-                        model_name=request_data.provider,
-                        model_version=request_data.model_version,
-                        dimensions=len(vector),
-                        vector=vector,
-                        meta_info={"source": "raw_text"}
-                    )
-                    if request_data.store_in_db:
-                        session.add(emb_obj)
-                    results.append(EmbeddingResultSchema(db_id=str(emb_obj.id), vector=vector))
-                elif t.message_id or t.chunk_id:
-                    content = ""
-                    if t.message_id:
-                        msg = session.query(Message).filter_by(id=t.message_id).first()
-                        content = msg.content if msg else ""
-                    elif t.chunk_id:
-                        ch = session.query(Chunk).filter_by(id=t.chunk_id).first()
-                        content = ch.content if ch else ""
+                try:
+                    if t.text is not None:
+                        vector = agent.generate_embedding(t.text)
+                        try:
+                            # Try to see if parent_type column exists and is required
+                            emb_obj = Embedding(
+                                id=uuid.uuid4(),
+                                model_name=request_data.provider,
+                                model_version=request_data.model_version,
+                                dimensions=len(vector),
+                                vector=vector,
+                                parent_type="raw_text",  # Default for raw text with no parent
+                                meta_info={"source": "raw_text"}
+                            )
+                        except Exception:
+                            # Fallback if parent_type doesn't exist or some other issue
+                            emb_obj = Embedding(
+                                id=uuid.uuid4(),
+                                model_name=request_data.provider,
+                                model_version=request_data.model_version,
+                                dimensions=len(vector),
+                                vector=vector,
+                                meta_info={"source": "raw_text"}
+                            )
+                        if request_data.store_in_db:
+                            embedding_objects.append(emb_obj)
+                        results.append(EmbeddingResultSchema(db_id=str(emb_obj.id), vector=vector))
+                    elif t.message_id or t.chunk_id:
+                        content = ""
+                        if t.message_id:
+                            msg = session.query(Message).filter_by(id=t.message_id).first()
+                            content = msg.content if msg else ""
+                        elif t.chunk_id:
+                            ch = session.query(Chunk).filter_by(id=t.chunk_id).first()
+                            content = ch.content if ch else ""
 
-                    vector = agent.generate_embedding(str(content))
-                    emb_obj = Embedding(
-                        id=uuid.uuid4(),
-                        model_name=request_data.provider,
-                        model_version=request_data.model_version,
-                        dimensions=len(vector),
-                        vector=vector,
-                        parent_message_id=t.message_id,
-                        parent_chunk_id=t.chunk_id,
-                        meta_info={"source": "db_ref"}
-                    )
-                    if request_data.store_in_db:
-                        session.add(emb_obj)
-                    results.append(EmbeddingResultSchema(db_id=str(emb_obj.id), vector=vector))
+                        if not content:
+                            logger.warning(f"Skipping empty content for {'message' if t.message_id else 'chunk'} {t.message_id or t.chunk_id}")
+                            continue
 
-            if request_data.store_in_db:
-                session.commit()
+                        vector = agent.generate_embedding(str(content))
+                        
+                        # Create the embedding object with the appropriate parent ID
+                        # Be careful with the column names to ensure they exist in the DB schema
+                        try:
+                            # Use the most appropriate method based on available columns
+                            try:
+                                # Try checking if the parent_type and parent_id columns exist
+                                # by executing a simple query to see if records with these fields exist
+                                with get_session() as check_session:
+                                    has_parent_type = check_session.query(
+                                        check_session.query(Embedding).filter(
+                                            Embedding.parent_type.isnot(None)
+                                        ).exists()
+                                    ).scalar()
+                                                                    
+                                if has_parent_type:
+                                    # Use parent_type and parent_id approach, defaulting for text embeddings
+                                    if t.message_id:
+                                        parent_type = "message"
+                                        parent_id = t.message_id
+                                    elif t.chunk_id:
+                                        parent_type = "chunk"
+                                        parent_id = t.chunk_id
+                                    else:
+                                        # For raw text, we don't have parent references
+                                        parent_type = "raw_text"
+                                        parent_id = None
+                                    
+                                    emb_obj = Embedding(
+                                        id=uuid.uuid4(),
+                                        model_name=request_data.provider,
+                                        model_version=request_data.model_version,
+                                        dimensions=len(vector),
+                                        vector=vector,
+                                        parent_type=parent_type,
+                                        parent_id=parent_id,
+                                        parent_message_id=t.message_id,
+                                        parent_chunk_id=t.chunk_id,
+                                        meta_info={"source": "db_ref" if t.message_id or t.chunk_id else "raw_text"}
+                                    )
+                                else:
+                                    # Use specific parent columns
+                                    emb_obj = Embedding(
+                                        id=uuid.uuid4(),
+                                        model_name=request_data.provider,
+                                        model_version=request_data.model_version,
+                                        dimensions=len(vector),
+                                        vector=vector,
+                                        parent_message_id=t.message_id,
+                                        parent_chunk_id=t.chunk_id,
+                                        meta_info={"source": "db_ref"}
+                                    )
+                            except Exception as inner_e:
+                                logger.warning(f"Could not determine parent column approach: {inner_e}")
+                                # Use specific parent columns as default
+                                emb_obj = Embedding(
+                                    id=uuid.uuid4(),
+                                    model_name=request_data.provider,
+                                    model_version=request_data.model_version,
+                                    dimensions=len(vector),
+                                    vector=vector,
+                                    parent_message_id=t.message_id,
+                                    parent_chunk_id=t.chunk_id,
+                                    meta_info={"source": "db_ref"}
+                                )
+                                
+                        except Exception as e:
+                            logger.error(f"Error creating embedding object: {e}")
+                            # Fallback to a version with just meta_info
+                            emb_obj = Embedding(
+                                id=uuid.uuid4(),
+                                model_name=request_data.provider,
+                                model_version=request_data.model_version,
+                                dimensions=len(vector),
+                                vector=vector,
+                                meta_info={"source": "db_ref", 
+                                          "message_id": str(t.message_id) if t.message_id else None,
+                                          "chunk_id": str(t.chunk_id) if t.chunk_id else None}
+                            )
+                            
+                        if request_data.store_in_db:
+                            embedding_objects.append(emb_obj)
+                        results.append(EmbeddingResultSchema(db_id=str(emb_obj.id), vector=vector))
+                except Exception as e:
+                    logger.error(f"Error processing embedding target: {e}")
+                    # Continue with the rest of the targets
+                    continue
+
+            # Store all embeddings in the database in a single transaction
+            if request_data.store_in_db and embedding_objects:
+                try:
+                    # Add all objects to the session
+                    for obj in embedding_objects:
+                        session.add(obj)
+                    # Commit the transaction
+                    session.commit()
+                except Exception as e:
+                    logger.error(f"Error storing embeddings in database: {e}")
+                    session.rollback()
+                    # Since we couldn't store them, mark as not stored in results
+                    for result in results:
+                        result.stored = False
 
         return results
 
@@ -109,7 +222,8 @@ class EmbeddingManager:
         options: EmbedAllOptions,
         provider: Optional[str] = None,
         model_version: Optional[str] = None,
-        store_in_db: bool = True
+        store_in_db: bool = True,
+        resume: bool = True
     ) -> int:
         """
         Embed all messages with more than `min_word_count` words.
@@ -118,6 +232,7 @@ class EmbeddingManager:
         :param provider: Embedding provider to use. If None, uses default.
         :param model_version: Specific model version to use. If None, uses default.
         :param store_in_db: Whether to store the embeddings in the database.
+        :param resume: Whether to skip messages that already have embeddings with the same model.
         :return: Number of messages embedded.
         """
         provider = provider or DEFAULT_EMBEDDING_PROVIDER
@@ -160,6 +275,32 @@ class EmbeddingManager:
 
             if options.include_roles:
                 query = query.filter(Message.role.in_(options.include_roles))
+                
+            # If resuming, exclude messages that already have embeddings with this model
+            if resume:
+                try:
+                    # Check if parent_message_id column exists in the database
+                    session.query(Embedding.parent_message_id).limit(1).all()
+                    
+                    # If we reach this point, the column exists
+                    has_parent_columns = True
+                    
+                    # Get IDs of messages that already have embeddings with this model
+                    existing_ids_query = session.query(Embedding.parent_message_id).filter(
+                        Embedding.model_name == provider,
+                        Embedding.model_version == model_version,
+                        Embedding.parent_message_id.isnot(None)
+                    )
+                    
+                    existing_message_ids = [r[0] for r in existing_ids_query.all()]
+                    logger.info(f"Found {len(existing_message_ids)} messages that already have embeddings with model {provider}/{model_version}")
+                    
+                    if existing_message_ids:
+                        query = query.filter(~Message.id.in_(existing_message_ids))
+                        
+                except Exception as e:
+                    logger.warning(f"Could not filter already embedded messages: {e}")
+                    logger.warning("Will attempt to create embeddings for all qualifying messages.")
             
             # Execute query with explicit columns
             qualifying_messages = query.all()
@@ -177,18 +318,33 @@ class EmbeddingManager:
                     message_id=msg.id
                 ))
 
-            embedding_request = EmbeddingRequestSchema(
-                provider=provider,
-                model_version=model_version,
-                store_in_db=store_in_db,
-                targets=targets
-            )
+            # Process in batches to avoid overwhelming the database or memory
+            batch_size = 100
+            total_processed = 0
+            
+            for i in range(0, len(targets), batch_size):
+                batch_targets = targets[i:i+batch_size]
+                logger.info(f"Processing batch {i//batch_size + 1} of {(len(targets) + batch_size - 1)//batch_size} ({len(batch_targets)} messages)")
+                
+                embedding_request = EmbeddingRequestSchema(
+                    provider=provider,
+                    model_version=model_version,
+                    store_in_db=store_in_db,
+                    targets=batch_targets
+                )
 
-            # Generate embeddings
-            results = self.embed_texts(embedding_request)
-            logger.info(f"Generated embeddings for {len(results)} messages.")
+                try:
+                    # Generate embeddings for this batch
+                    results = self.embed_texts(embedding_request)
+                    total_processed += len(results)
+                    logger.info(f"Generated embeddings for {len(results)} messages in this batch. Total: {total_processed}")
+                except Exception as e:
+                    logger.error(f"Error processing batch: {e}")
+                    logger.info(f"Successfully processed {total_processed} messages before error")
+                    return total_processed
 
-            return len(results)
+            logger.info(f"Generated embeddings for a total of {total_processed} messages.")
+            return total_processed
 
     def summarize_messages(
             self,
