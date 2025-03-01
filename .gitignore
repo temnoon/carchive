@@ -44,9 +44,15 @@ htmlcov/
 
 # Large data and chat files - excluding personal data
 chat/*
+chat2/*
+Anthropic/*
 !chat/.gitkeep
 facebook-temnoon-2025-01-30-4w69iQe0/
 *.zip
+media/
+*conversations.json
+fix_timestamps.py
+view_output.py
 
 # Output directories - excluding test outputs
 output/

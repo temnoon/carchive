@@ -19,11 +19,11 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = Field(default=None)
     ollama_url: str = Field(default="http://localhost:11434")
     # Default providers
-    embedding_provider: str = Field(default="ollama") 
+    embedding_provider: str = Field(default="ollama")
     chat_provider: str = Field(default="ollama")
     content_provider: str = Field(default="ollama")
     multimodal_provider: str = Field(default="ollama")
-    
+
     # Model configurations
     embedding_model_name: str = Field(default="nomic-embed-text")
     embedding_dimensions: int = Field(default=768)
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     db_user: str = "carchive_app"
     db_password: Optional[str] = Field(default=None)
     db_host: str = "localhost"
-    db_name: str = "carchive03_db"
+    db_name: str = "carchive04_db"
 
     def build_database_url(self) -> str:
         password = keyring.get_password("carchive_app", "db_password") or self.db_password

@@ -12,6 +12,9 @@ from carchive.cli.collection_cli import collection_app
 from carchive.cli.gencom_cli import gencom_app
 from carchive.cli.media_cli import app as media_app
 from carchive.cli.api_cli import app as api_app  # Import the API CLI
+from carchive.cli.conversation_cli import conversation_app  # Import the Conversation CLI
+from carchive.cli.conversation_cli import app as new_conversation_app  # Import our new conversation CLI
+from carchive.cli.migration_cli import app as migration_app  # Import the Migration CLI
 
 
 logging.basicConfig(
@@ -30,6 +33,9 @@ main_app.add_typer(summarize_app, name="summarize")
 main_app.add_typer(gencom_app, name="gencom")
 main_app.add_typer(media_app, name="media")
 main_app.add_typer(api_app, name="api")  # Add the API CLI
+main_app.add_typer(conversation_app, name="conversation")  # Add the Conversation CLI
+main_app.add_typer(new_conversation_app, name="conv2")  # Add our enhanced conversation CLI
+main_app.add_typer(migration_app, name="migrate")  # Add the Migration CLI
 
 
 def main():

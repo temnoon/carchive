@@ -24,6 +24,10 @@ greenlet = ">=2.0,<3.0"
 keyring = ">=23.0,<24.0"
 python-dotenv = ">=1.0,<2.0"
 scikit-learn = "^1.6.1"
+requests = "^2.32.3"
+pymdown-extensions = "^10.14.3"
+tqdm = "^4.66.1"    # Progress bars for migrations
+psycopg2-binary = "^2.9.9"  # Alternative to psycopg2 that doesn't require system dependencies
 
 [tool.poetry.scripts]
 carchive = "carchive.cli.main_cli:main"

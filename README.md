@@ -1,15 +1,16 @@
 # Carchive
 
-Carchive is a modern conversation archiving and analysis system designed to store, organize, search, and analyze text-based conversations using vector embeddings and AI.
+Carchive is a modern conversation archiving and analysis system designed to store, organize, search, and analyze text-based conversations using vector embeddings and AI. It supports importing conversations from multiple providers including ChatGPT, Claude, and Perplexity.
 
 ## Features
 
-- **Conversation Archiving**: Store and organize text-based conversations
+- **Multi-Provider Support**: Import from ChatGPT, Claude, and other LLM providers
+- **Conversation Archiving**: Store and organize text-based conversations with metadata
 - **Vector Search**: Find semantically similar content using pgvector
 - **AI Analysis**: Generate summaries, insights, and connections between conversations
 - **Media Management**: Link media files with conversation messages
-- **Clustering**: Automatically group similar content
-- **Content Generation**: Create documents from conversation snippets
+- **Collections**: Organize conversations and messages into custom collections
+- **Statistics**: View usage patterns and distribution by provider
 
 ## Prerequisites
 
@@ -32,44 +33,152 @@ Carchive is a modern conversation archiving and analysis system designed to stor
 
 3. Set up environment variables (create a `.env` file):
    ```
-   DATABASE_URL=postgresql://username:password@localhost:5432/carchive
+   DATABASE_URL=postgresql://username:password@localhost:5432/carchive04_db
    ANTHROPIC_API_KEY=your_anthropic_api_key  # Optional for AI features
    OPENAI_API_KEY=your_openai_api_key  # Optional for AI features
+   OLLAMA_URL=http://localhost:11434  # Optional for local embeddings
    ```
 
-4. Run database migrations:
+4. Create and initialize the database:
    ```
+   # Create the database with pgvector support
+   ./setup_carchive04_db.sh
+   
+   # Or run the migrations manually
    poetry run alembic upgrade head
    ```
 
-## Usage
+## CLI Commands
+
+Carchive provides a comprehensive CLI interface for managing conversations and performing analysis.
+
+### Main CLI
 
 ```
-# Run CLI
-poetry run carchive
+poetry run carchive [OPTIONS] COMMAND [ARGS]...
+```
 
-# Search conversations
-poetry run carchive search "your search query"
+Available Commands:
+- `api` - Commands for managing the API server
+- `collection` - Commands to manage or create collections
+- `conv2` - Commands for managing conversations
+- `conversation` - Legacy conversation commands
+- `embed` - Commands for generating and storing embeddings
+- `gencom` - Commands for generating agent comments on content
+- `ingest` - Commands to ingest chat data into the database
+- `media` - Commands for managing media files
+- `migrate` - Migration tools for carchive
+- `search` - Commands to search conversations/messages/chunks
+- `summarize` - Commands for generating summaries using content agents
 
-# Generate embeddings
-poetry run carchive embed
+### Migration from LLM Services
 
-# Cluster similar content
-poetry run carchive cluster
+```shell
+# Migrate ChatGPT archive
+poetry run carchive migrate chatgpt --db-name=carchive04_db --db-user=carchive_app path/to/conversations.json
 
-# Run API server
-poetry run carchive api
+# Migrate Claude archive
+poetry run carchive migrate claude --db-name=carchive04_db --db-user=carchive_app path/to/claude_archive
+```
+
+### Conversation Management
+
+```shell
+# List all conversations
+poetry run carchive conv2 list
+
+# Filter conversations by provider
+poetry run carchive conv2 list --provider claude
+
+# Get conversation details
+poetry run carchive conv2 get <conversation-id> --with-messages
+
+# View conversation statistics by provider
+poetry run carchive conv2 stats
+
+# List available providers
+poetry run carchive conv2 providers
+
+# Export a conversation to JSON
+poetry run carchive conv2 export <conversation-id> output.json
+```
+
+### Search
+
+```shell
+# Basic search
+poetry run carchive search messages "your search term"
+
+# Detailed search with context
+poetry run carchive search detailed "your search term"
+
+# Advanced search using saved criteria
+poetry run carchive search advanced --criteria-file criteria.json --output-file results.html
+```
+
+### Media Management
+
+```shell
+# Scan and link media files
+poetry run carchive media scan-and-link --media-dir /path/to/media --recursive
+
+# Analyze media distribution
+poetry run carchive media analyze-media-distribution
+```
+
+### Collections
+
+```shell
+# Create a new collection
+poetry run carchive collection create "Collection Name" --description "Description"
+
+# List existing collections
+poetry run carchive collection list
+
+# Render a collection to HTML
+poetry run carchive collection render <collection-id> --output-file collection.html
+```
+
+### Embeddings
+
+```shell
+# Generate embeddings for all messages
+poetry run carchive embed all --min-words 10
+
+# Generate embeddings for a specific collection
+poetry run carchive embed collection <collection-id>
+```
+
+### API Server
+
+```shell
+# Run the API server
+poetry run carchive api serve --host 0.0.0.0 --port 8000
 ```
 
 ## Development
 
-```
+```shell
 # Run tests
 poetry run pytest
 
 # Add dependency
 poetry add package_name
+
+# Set up environment
+./setup_carchive_env.sh
 ```
+
+## Database Structure
+
+The carchive04_db uses a normalized structure with the following key tables:
+- **providers** - Information about LLM providers (ChatGPT, Claude, etc.)
+- **conversations** - Main conversation metadata
+- **messages** - Individual messages with content and metadata
+- **media** - Media file references and metadata
+- **message_media** - Links between messages and media
+- **collections/collection_items** - For organizing conversations and messages
+- **embeddings** - Vector embeddings for semantic search
 
 ## License
 
