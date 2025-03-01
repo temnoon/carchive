@@ -28,6 +28,7 @@ requests = "^2.32.3"
 pymdown-extensions = "^10.14.3"
 tqdm = "^4.66.1"    # Progress bars for migrations
 psycopg2-binary = "^2.9.9"  # Alternative to psycopg2 that doesn't require system dependencies
+matplotlib = "^3.10.1"
 
 [tool.poetry.scripts]
 carchive = "carchive.cli.main_cli:main"
