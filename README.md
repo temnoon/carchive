@@ -22,7 +22,7 @@ Carchive is a modern conversation archiving and analysis system designed to stor
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/carchive.git
+   git clone https://github.com/temnoon/carchive.git
    cd carchive
    ```
 
@@ -43,7 +43,7 @@ Carchive is a modern conversation archiving and analysis system designed to stor
    ```
    # Create the database with pgvector support
    ./setup_carchive04_db.sh
-   
+
    # Or run the migrations manually
    poetry run alembic upgrade head
    ```
