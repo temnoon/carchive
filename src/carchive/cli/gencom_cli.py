@@ -39,6 +39,9 @@ def gencom_message(
     ),
     max_tokens: Optional[int] = typer.Option(
         None, "--max-tokens", help="Maximum token count for the generated comment."
+    ),
+    preview_prompt: bool = typer.Option(
+        True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
     )
 ):
     """
@@ -51,8 +54,40 @@ def gencom_message(
         prompt_template = typer.prompt("Enter the prompt template (use {content} as placeholder)")
     elif not prompt_template:
         prompt_template = "Please provide a comment on the following content:\n\n{content}"
-
-    manager = ContentTaskManager(provider=provider)
+    
+    # Create effective prompt with length constraints
+    effective_prompt = prompt_template
+    if max_words:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+    if max_tokens:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+    
+    # Show prompt template preview and get confirmation if enabled
+    if preview_prompt:
+        typer.echo(f"\nPrompt template that will be used:\n---\n{effective_prompt}\n---")
+        if typer.confirm("Do you want to proceed with this prompt?", default=True):
+            manager = ContentTaskManager(provider=provider)
+        else:
+            if typer.confirm("Would you like to edit the prompt?", default=True):
+                prompt_template = typer.prompt("Enter the updated prompt template")
+                # Show the updated prompt with any length constraints
+                effective_prompt = prompt_template
+                if max_words:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+                if max_tokens:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+                typer.echo(f"\nUpdated prompt template:\n---\n{effective_prompt}\n---")
+                if typer.confirm("Do you want to proceed with this prompt?", default=True):
+                    manager = ContentTaskManager(provider=provider)
+                else:
+                    typer.echo("Operation cancelled.")
+                    raise typer.Exit(code=0)
+            else:
+                typer.echo("Operation cancelled.")
+                raise typer.Exit(code=0)
+    else:
+        # Skip preview and proceed directly
+        manager = ContentTaskManager(provider=provider)
     
     try:
         # Validate that the message exists
@@ -118,6 +153,9 @@ def gencom_conversation(
     ),
     max_tokens: Optional[int] = typer.Option(
         None, "--max-tokens", help="Maximum token count for the generated comment."
+    ),
+    preview_prompt: bool = typer.Option(
+        True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
     )
 ):
     """
@@ -130,8 +168,40 @@ def gencom_conversation(
         prompt_template = typer.prompt("Enter the prompt template (use {content} as placeholder)")
     elif not prompt_template:
         prompt_template = "Please provide a comment on the following conversation transcript:\n\n{content}"
-
-    manager = ContentTaskManager(provider=provider)
+    
+    # Create effective prompt with length constraints
+    effective_prompt = prompt_template
+    if max_words:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+    if max_tokens:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+    
+    # Show prompt template preview and get confirmation if enabled
+    if preview_prompt:
+        typer.echo(f"\nPrompt template that will be used:\n---\n{effective_prompt}\n---")
+        if typer.confirm("Do you want to proceed with this prompt?", default=True):
+            manager = ContentTaskManager(provider=provider)
+        else:
+            if typer.confirm("Would you like to edit the prompt?", default=True):
+                prompt_template = typer.prompt("Enter the updated prompt template")
+                # Show the updated prompt with any length constraints
+                effective_prompt = prompt_template
+                if max_words:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+                if max_tokens:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+                typer.echo(f"\nUpdated prompt template:\n---\n{effective_prompt}\n---")
+                if typer.confirm("Do you want to proceed with this prompt?", default=True):
+                    manager = ContentTaskManager(provider=provider)
+                else:
+                    typer.echo("Operation cancelled.")
+                    raise typer.Exit(code=0)
+            else:
+                typer.echo("Operation cancelled.")
+                raise typer.Exit(code=0)
+    else:
+        # Skip preview and proceed directly
+        manager = ContentTaskManager(provider=provider)
     
     try:
         # Validate that the conversation exists
@@ -197,6 +267,9 @@ def gencom_chunk(
     ),
     max_tokens: Optional[int] = typer.Option(
         None, "--max-tokens", help="Maximum token count for the generated comment."
+    ),
+    preview_prompt: bool = typer.Option(
+        True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
     )
 ):
     """
@@ -209,8 +282,40 @@ def gencom_chunk(
         prompt_template = typer.prompt("Enter the prompt template (use {content} as placeholder)")
     elif not prompt_template:
         prompt_template = "Please provide a comment on the following content chunk:\n\n{content}"
-
-    manager = ContentTaskManager(provider=provider)
+    
+    # Create effective prompt with length constraints
+    effective_prompt = prompt_template
+    if max_words:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+    if max_tokens:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+    
+    # Show prompt template preview and get confirmation if enabled
+    if preview_prompt:
+        typer.echo(f"\nPrompt template that will be used:\n---\n{effective_prompt}\n---")
+        if typer.confirm("Do you want to proceed with this prompt?", default=True):
+            manager = ContentTaskManager(provider=provider)
+        else:
+            if typer.confirm("Would you like to edit the prompt?", default=True):
+                prompt_template = typer.prompt("Enter the updated prompt template")
+                # Show the updated prompt with any length constraints
+                effective_prompt = prompt_template
+                if max_words:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+                if max_tokens:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+                typer.echo(f"\nUpdated prompt template:\n---\n{effective_prompt}\n---")
+                if typer.confirm("Do you want to proceed with this prompt?", default=True):
+                    manager = ContentTaskManager(provider=provider)
+                else:
+                    typer.echo("Operation cancelled.")
+                    raise typer.Exit(code=0)
+            else:
+                typer.echo("Operation cancelled.")
+                raise typer.Exit(code=0)
+    else:
+        # Skip preview and proceed directly
+        manager = ContentTaskManager(provider=provider)
     
     try:
         # Validate that the chunk exists
@@ -290,6 +395,9 @@ def gencom_all(
     ),
     max_tokens: Optional[int] = typer.Option(
         None, "--max-tokens", help="Maximum token count for the generated comments."
+    ),
+    preview_prompt: bool = typer.Option(
+        True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
     )
 ):
     """
@@ -310,9 +418,43 @@ def gencom_all(
             prompt_template = "Please provide a comment on the following conversation transcript:\n\n{content}"
         elif target_type == "chunk":
             prompt_template = "Please provide a comment on the following content chunk:\n\n{content}"
-
-    logger.info(f"Starting generated comment process for {target_type}s.")
-    manager = ContentTaskManager(provider=provider)
+    
+    # Create effective prompt with length constraints
+    effective_prompt = prompt_template
+    if max_words:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+    if max_tokens:
+        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+    
+    # Show prompt template preview and get confirmation if enabled
+    if preview_prompt:
+        typer.echo(f"\nPrompt template that will be used:\n---\n{effective_prompt}\n---")
+        if typer.confirm("Do you want to proceed with this prompt?", default=True):
+            logger.info(f"Starting generated comment process for {target_type}s.")
+            manager = ContentTaskManager(provider=provider)
+        else:
+            if typer.confirm("Would you like to edit the prompt?", default=True):
+                prompt_template = typer.prompt("Enter the updated prompt template")
+                # Show the updated prompt with any length constraints
+                effective_prompt = prompt_template
+                if max_words:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+                if max_tokens:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+                typer.echo(f"\nUpdated prompt template:\n---\n{effective_prompt}\n---")
+                if typer.confirm("Do you want to proceed with this prompt?", default=True):
+                    logger.info(f"Starting generated comment process for {target_type}s.")
+                    manager = ContentTaskManager(provider=provider)
+                else:
+                    typer.echo("Operation cancelled.")
+                    raise typer.Exit(code=0)
+            else:
+                typer.echo("Operation cancelled.")
+                raise typer.Exit(code=0)
+    else:
+        # Skip preview and proceed directly
+        logger.info(f"Starting generated comment process for {target_type}s.")
+        manager = ContentTaskManager(provider=provider)
     
     # Initialize an embedding manager if needed
     embedding_manager = None

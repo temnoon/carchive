@@ -65,6 +65,7 @@ poetry run carchive gencom conversation <conversation-id> --interactive
 - `--role`: Filter by message role (user, assistant, system)
 - `--days`: Only process content from the last N days
 - `--override`: Force regeneration even if comments already exist
+- `--preview-prompt/--no-preview-prompt`: Control whether to show and confirm prompt before generating content
 
 ## Technical Details
 
@@ -139,5 +140,28 @@ poetry run carchive gencom message 550e8400-e29b-41d4-a716-446655440000 \
     --provider anthropic
 
 # Output:
+# Prompt template that will be used:
+# ---
+# Summarize the key points from this content:
+# 
+# {content}
+# 
+# Please limit your response to approximately 200 words.
+# ---
+# Do you want to proceed with this prompt? [Y/n]: y
 # Generated comment for message 550e8400-e29b-41d4-a716-446655440000 (AgentOutput ID: c1d5bf90-3893-4d1a-90d7-991102fa7321).
+```
+
+### Skipping Prompt Preview
+
+```bash
+# Skip the prompt preview and confirmation step
+poetry run carchive gencom message 550e8400-e29b-41d4-a716-446655440000 \
+    --prompt-template "Summarize the key points from this content:" \
+    --max-words 200 \
+    --provider ollama \
+    --no-preview-prompt
+
+# Output:
+# Generated comment for message 550e8400-e29b-41d4-a716-446655440000 (AgentOutput ID: f2d5bf90-3893-4d1a-90d7-991102fa8765).
 ```
