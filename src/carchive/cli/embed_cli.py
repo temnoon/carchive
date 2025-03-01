@@ -108,11 +108,29 @@ def embed_all_cmd(
         "--store-in-db/--no-store-in-db",
         help="Whether to store embeddings in the database.",
         show_default=True
+    ),
+    resume: bool = typer.Option(
+        True,
+        "--resume/--no-resume",
+        help="Skip messages that already have embeddings with the specified model.",
+        show_default=True
+    ),
+    batch_size: int = typer.Option(
+        100,
+        "--batch-size",
+        help="Number of embeddings to process in a single batch.",
+        show_default=True
     )
 ):
     """
     Embed all messages with more than a specified number of words.
     Excludes messages with empty or non-substantive content.
+    
+    When --resume is enabled (default), messages that already have embeddings
+    with the specified model will be skipped. This allows continuing a previously
+    interrupted embedding process.
+    
+    Processing is done in batches to avoid memory issues with large datasets.
     """
     # Create EmbedAllOptions instance
     try:
@@ -130,11 +148,29 @@ def embed_all_cmd(
 
     # Perform embedding
     try:
+        # First check if the database schema has the necessary columns
+        with get_session() as session:
+            try:
+                # Try to access the parent_message_id column
+                from sqlalchemy import inspect
+                inspector = inspect(session.bind)
+                columns = [c['name'] for c in inspector.get_columns('embeddings')]
+                
+                if 'parent_message_id' not in columns:
+                    logger.warning("The embeddings table is missing the 'parent_message_id' column.")
+                    logger.warning("Run 'alembic upgrade head' to add the required columns.")
+                    raise typer.Exit(code=1)
+            except Exception as e:
+                logger.error(f"Error checking database schema: {e}")
+                logger.warning("Make sure to run 'alembic upgrade head' before embedding.")
+                raise typer.Exit(code=1)
+        
         count = manager.embed_all_messages(
             options=options,
             provider=provider,
             model_version=model_version,
-            store_in_db=store_in_db
+            store_in_db=store_in_db,
+            resume=resume
         )
         typer.echo(f"Successfully embedded {count} messages.")
     except Exception as e:
