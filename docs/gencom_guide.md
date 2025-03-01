@@ -60,6 +60,8 @@ poetry run carchive gencom conversation <conversation-id> --interactive
 - `--embed-provider`: Use a different provider for embeddings
 - `--target-type`: Type of content to process (message, conversation, chunk)
 - `--min-word-count`: Minimum word count for content to process
+- `--max-words`: Maximum word count for the generated comment
+- `--max-tokens`: Maximum token count for the generated comment
 - `--role`: Filter by message role (user, assistant, system)
 - `--days`: Only process content from the last N days
 - `--override`: Force regeneration even if comments already exist
@@ -125,4 +127,17 @@ poetry run carchive gencom conversation 550e8400-e29b-41d4-a716-446655440000 \
 
 # Output:
 # Generated comment for conversation 550e8400-e29b-41d4-a716-446655440000 (AgentOutput ID: a8d5bf90-3893-4d1a-90d7-991102fa7654).
+```
+
+### Word-Limited Summaries
+
+```bash
+# Generate a concise summary with approximately 200 words
+poetry run carchive gencom message 550e8400-e29b-41d4-a716-446655440000 \
+    --prompt-template "Summarize the key points from this content:" \
+    --max-words 200 \
+    --provider anthropic
+
+# Output:
+# Generated comment for message 550e8400-e29b-41d4-a716-446655440000 (AgentOutput ID: c1d5bf90-3893-4d1a-90d7-991102fa7321).
 ```

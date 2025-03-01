@@ -21,7 +21,9 @@ class ContentTaskManager:
         task: str,
         context: Optional[str] = None,
         prompt_template: Optional[str] = None,
-        override: bool = False
+        override: bool = False,
+        max_words: Optional[int] = None,
+        max_tokens: Optional[int] = None
     ):
         """Run a content processing task on any target type (message, conversation, chunk).
         
@@ -32,6 +34,8 @@ class ContentTaskManager:
             context: Optional context for the task
             prompt_template: Optional custom prompt template
             override: Whether to override existing output
+            max_words: Optional maximum word count for the output
+            max_tokens: Optional maximum token count for the output
             
         Returns:
             The AgentOutput object with the processing result
@@ -80,11 +84,26 @@ class ContentTaskManager:
             if context:
                 context_dict = {"system_prompt": context}
 
+            # If max_words or max_tokens is specified, update the prompt template
+            effective_prompt = prompt_template
+            
+            if max_words:
+                if effective_prompt:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+                else:
+                    effective_prompt = f"Please limit your response to approximately {max_words} words.\n\n{{content}}"
+                    
+            if max_tokens:
+                if effective_prompt:
+                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+                else:
+                    effective_prompt = f"Please limit your response to approximately {max_tokens} tokens.\n\n{{content}}"
+            
             output_text = self.agent.process_task(
                 task=task, 
                 content=content_text, 
                 context=context_dict, 
-                prompt_template=prompt_template
+                prompt_template=effective_prompt
             )
 
             if existing and override:

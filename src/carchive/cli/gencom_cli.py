@@ -33,6 +33,12 @@ def gencom_message(
     ),
     embedding_provider: Optional[str] = typer.Option(
         None, "--embed-provider", help="Provider to use for embeddings (defaults to gencom provider)."
+    ),
+    max_words: Optional[int] = typer.Option(
+        None, "--max-words", help="Maximum word count for the generated comment."
+    ),
+    max_tokens: Optional[int] = typer.Option(
+        None, "--max-tokens", help="Maximum token count for the generated comment."
     )
 ):
     """
@@ -61,7 +67,9 @@ def gencom_message(
             target_id=message_id,
             task="gencom",
             prompt_template=prompt_template,
-            override=override
+            override=override,
+            max_words=max_words,
+            max_tokens=max_tokens
         )
         
         typer.echo(f"Generated comment for message {message_id} (AgentOutput ID: {output.id}).")
@@ -104,6 +112,12 @@ def gencom_conversation(
     ),
     embedding_provider: Optional[str] = typer.Option(
         None, "--embed-provider", help="Provider to use for embeddings (defaults to gencom provider)."
+    ),
+    max_words: Optional[int] = typer.Option(
+        None, "--max-words", help="Maximum word count for the generated comment."
+    ),
+    max_tokens: Optional[int] = typer.Option(
+        None, "--max-tokens", help="Maximum token count for the generated comment."
     )
 ):
     """
@@ -132,7 +146,9 @@ def gencom_conversation(
             target_id=conversation_id,
             task="gencom",
             prompt_template=prompt_template,
-            override=override
+            override=override,
+            max_words=max_words,
+            max_tokens=max_tokens
         )
         
         typer.echo(f"Generated comment for conversation {conversation_id} (AgentOutput ID: {output.id}).")
@@ -175,6 +191,12 @@ def gencom_chunk(
     ),
     embedding_provider: Optional[str] = typer.Option(
         None, "--embed-provider", help="Provider to use for embeddings (defaults to gencom provider)."
+    ),
+    max_words: Optional[int] = typer.Option(
+        None, "--max-words", help="Maximum word count for the generated comment."
+    ),
+    max_tokens: Optional[int] = typer.Option(
+        None, "--max-tokens", help="Maximum token count for the generated comment."
     )
 ):
     """
@@ -203,7 +225,9 @@ def gencom_chunk(
             target_id=chunk_id,
             task="gencom",
             prompt_template=prompt_template,
-            override=override
+            override=override,
+            max_words=max_words,
+            max_tokens=max_tokens
         )
         
         typer.echo(f"Generated comment for chunk {chunk_id} (AgentOutput ID: {output.id}).")
@@ -260,6 +284,12 @@ def gencom_all(
     ),
     embedding_provider: Optional[str] = typer.Option(
         None, "--embed-provider", help="Provider to use for embeddings (defaults to gencom provider)."
+    ),
+    max_words: Optional[int] = typer.Option(
+        None, "--max-words", help="Maximum word count for the generated comments."
+    ),
+    max_tokens: Optional[int] = typer.Option(
+        None, "--max-tokens", help="Maximum token count for the generated comments."
     )
 ):
     """
@@ -379,7 +409,9 @@ def gencom_all(
                 target_id=str(item.id),
                 task="gencom",
                 prompt_template=prompt_template,
-                override=override
+                override=override,
+                max_words=max_words,
+                max_tokens=max_tokens
             )
             
             logger.info(f"{target_type.capitalize()} {item.id} processed (AgentOutput ID: {output.id}).")
