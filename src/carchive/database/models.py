@@ -161,9 +161,17 @@ class Embedding(Base):
     model_name = Column(String, nullable=False)  # e.g., 'bert', 'openai'
     model_version = Column(String, nullable=True)
     dimensions = Column(Integer, nullable=False)  # Embedding dimension
-    vector = Column(Vector(768))  # Adjust dimension based on model (e.g., 768 for BERT)
+    vector = Column(Vector(768))  # Using 768 dimensions for nomic-embed-text model
+    
+    # Support for both parent_id/parent_type pattern and direct linking
+    parent_type = Column(String, nullable=True)  # 'conversation', 'message', 'chunk', 'media'
+    parent_id = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Specific parent relationships
     parent_message_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
     parent_chunk_id = Column(UUID(as_uuid=True), ForeignKey("chunks.id"), nullable=True)
+    
+    embedding_type = Column(String, nullable=True)  # 'query', 'document', 'hybrid'
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     meta_info = Column(JSONB, nullable=True)
 
