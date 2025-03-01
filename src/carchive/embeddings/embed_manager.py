@@ -127,8 +127,24 @@ class EmbeddingManager:
         agent = AgentManager().get_embedding_agent(provider)
 
         with get_session() as session:
-            # Query messages based on criteria
-            query = session.query(Message)
+            # Use specific column selection to avoid querying non-existent columns
+            query = session.query(
+                Message.id,
+                Message.conversation_id, 
+                Message.source_id,
+                Message.parent_id,
+                Message.role,
+                Message.author_name,
+                Message.content,
+                Message.content_type,
+                Message.created_at,
+                Message.updated_at,
+                Message.status,
+                Message.position,
+                Message.weight,
+                Message.end_turn,
+                Message.meta_info
+            )
 
             if options.exclude_empty:
                 query = query.filter(Message.content.isnot(None), Message.content != "")
@@ -143,7 +159,9 @@ class EmbeddingManager:
             query = query.filter(word_count_expr > options.min_word_count)
 
             if options.include_roles:
-                query = query.filter(Message.meta_info['author_role'].as_string().in_(options.include_roles))
+                query = query.filter(Message.role.in_(options.include_roles))
+            
+            # Execute query with explicit columns
             qualifying_messages = query.all()
             logger.info(f"Found {len(qualifying_messages)} messages to embed based on criteria.")
 
@@ -199,14 +217,35 @@ class EmbeddingManager:
                     func.regexp_split_to_array(Message.content, r'\s+'), 1
                 )
 
-                # Fetch messages that have embeddings, meet word count, and have no summary yet
-                query = session.query(Message).join(Embedding, Embedding.parent_message_id == Message.id)\
-                    .outerjoin(AgentOutput,
-                               (AgentOutput.target_type == 'message') &
-                               (AgentOutput.target_id == Message.id) &
-                               (AgentOutput.output_type == 'summary'))\
-                    .filter(AgentOutput.id.is_(None))\
-                    .filter(word_count_expr >= min_word_count)
+                # Explicitly select only the columns that exist in the messages table
+                query = session.query(
+                    Message.id,
+                    Message.conversation_id,
+                    Message.source_id,
+                    Message.parent_id,
+                    Message.role,
+                    Message.author_name,
+                    Message.content,
+                    Message.content_type,
+                    Message.created_at,
+                    Message.updated_at,
+                    Message.status,
+                    Message.position,
+                    Message.weight,
+                    Message.end_turn,
+                    Message.meta_info
+                ).join(
+                    Embedding, Embedding.parent_message_id == Message.id
+                ).outerjoin(
+                    AgentOutput,
+                    (AgentOutput.target_type == 'message') &
+                    (AgentOutput.target_id == Message.id) &
+                    (AgentOutput.output_type == 'summary')
+                ).filter(
+                    AgentOutput.id.is_(None)
+                ).filter(
+                    word_count_expr >= min_word_count
+                )
 
                 if limit:
                     query = query.limit(limit)

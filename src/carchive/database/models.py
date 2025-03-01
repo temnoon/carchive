@@ -54,7 +54,7 @@ class Message(Base):
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"))
     source_id = Column(String, nullable=True)  # original ID from the source system
     parent_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
-    role = Column(String, nullable=True)  # user, assistant, system, tool, etc.
+    role = Column(String, nullable=False)  # user, assistant, system, tool, etc.
     author_name = Column(String, nullable=True)
     content = Column(Text, nullable=True)
     content_type = Column(String, nullable=True)  # text, code, multimodal_text, etc.
@@ -62,11 +62,12 @@ class Message(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True)
     status = Column(String, nullable=True)  # finished_successfully, etc.
     position = Column(Integer, nullable=True)  # ordered position in conversation
-    weight = Column(Integer, nullable=True)  # for weighted conversations
+    weight = Column(Integer, nullable=True)  # for weighted conversations (float in DB)
     end_turn = Column(Boolean, default=True)  # message ends a turn
     meta_info = Column(JSONB, nullable=True)
-    # Legacy field, kept for backward compatibility
-    media_id = Column(UUID(as_uuid=True), ForeignKey("media.id"), nullable=True)
+    
+    # Remove media_id column as it doesn't exist in the actual database schema
+    # and media associations are handled through the message_media table
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")

@@ -143,10 +143,19 @@ poetry run carchive collection render <collection-id> --output-file collection.h
 
 ```shell
 # Generate embeddings for all messages
-poetry run carchive embed all --min-words 10
+poetry run carchive embed all --min-word-count 10
+
+# Generate embeddings for specific roles
+poetry run carchive embed all --min-word-count 10 --include-roles user assistant
+
+# Generate embeddings with custom model
+poetry run carchive embed all --min-word-count 10 --provider openai --model-version text-embedding-ada-002
 
 # Generate embeddings for a specific collection
 poetry run carchive embed collection <collection-id>
+
+# Generate summaries for messages with embeddings
+poetry run carchive embed summarize --provider llama3.2
 ```
 
 ### API Server
