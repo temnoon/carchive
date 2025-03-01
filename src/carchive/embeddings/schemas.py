@@ -16,6 +16,7 @@ class EmbeddingTargetSchema(BaseModel):
     text: Optional[str] = None
     message_id: Optional[uuid.UUID] = None
     chunk_id: Optional[uuid.UUID] = None
+    agent_output_id: Optional[uuid.UUID] = None
 
 class EmbeddingRequestSchema(BaseModel):
     provider: str

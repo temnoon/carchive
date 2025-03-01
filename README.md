@@ -65,7 +65,7 @@ Available Commands:
 - `conversation` - Legacy conversation commands
 - `cluster` - Commands for clustering and visualizing embeddings by topic
 - `embed` - Commands for generating and storing embeddings
-- `gencom` - Commands for generating agent comments on content
+- `gencom` - Commands for generating AI comments on content (see [Gencom Guide](docs/gencom_guide.md))
 - `ingest` - Commands to ingest chat data into the database
 - `media` - Commands for managing media files
 - `migrate` - Migration tools for carchive

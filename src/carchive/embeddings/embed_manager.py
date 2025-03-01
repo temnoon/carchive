@@ -20,7 +20,69 @@ from carchive.core.config import DEFAULT_EMBEDDING_PROVIDER, DEFAULT_EMBEDDING_M
 logger = logging.getLogger(__name__)
 
 class EmbeddingManager:
-    def embed_texts(self, request_data: EmbeddingRequestSchema) -> List[EmbeddingResultSchema]:
+    def embed_texts(
+        self, 
+        texts: List[str] = None, 
+        parent_ids: List[str] = None, 
+        parent_type: str = None,
+        provider: str = None,
+        model_version: str = None,
+        store_in_db: bool = True
+    ) -> List[Embedding]:
+        """
+        Direct method to embed one or more texts with optional parent references.
+        This is a simplified interface for embedding that doesn't require creating schema objects.
+        
+        Args:
+            texts: List of text strings to embed
+            parent_ids: Optional list of parent IDs (must match length of texts)
+            parent_type: Type of parent ('message', 'conversation', 'chunk', 'agent_output')
+            provider: Provider to use for embeddings (default: DEFAULT_EMBEDDING_PROVIDER)
+            model_version: Model version to use (default: DEFAULT_EMBEDDING_MODEL)
+            store_in_db: Whether to store embeddings in database (default: True)
+            
+        Returns:
+            List of created Embedding objects
+        """
+        if not texts:
+            logger.warning("No texts provided for embedding")
+            return []
+            
+        if parent_ids and len(parent_ids) != len(texts):
+            raise ValueError("Length of parent_ids must match length of texts")
+            
+        # Create targets for the traditional embed_texts_schema method
+        targets = []
+        for i, text in enumerate(texts):
+            target = EmbeddingTargetSchema(text=text)
+            targets.append(target)
+            
+        # Build the request schema
+        request = EmbeddingRequestSchema(
+            targets=targets,
+            provider=provider or DEFAULT_EMBEDDING_PROVIDER,
+            model_version=model_version or DEFAULT_EMBEDDING_MODEL,
+            store_in_db=store_in_db
+        )
+        
+        # Call the schema-based method
+        embedding_results = self.embed_texts_schema(request)
+        
+        # Get the created embeddings and update their parent references
+        with get_session() as session:
+            embeddings = []
+            for i, result in enumerate(embedding_results):
+                emb = session.query(Embedding).filter_by(id=result.db_id).first()
+                if emb and parent_ids and parent_type:
+                    emb.parent_type = parent_type
+                    emb.parent_id = parent_ids[i]
+                    session.add(emb)
+                embeddings.append(emb)
+            session.commit()
+            
+        return embeddings
+    
+    def embed_texts_schema(self, request_data: EmbeddingRequestSchema) -> List[EmbeddingResultSchema]:
         """
         Takes a list of texts or DB references, generates embeddings, and returns them.
         Also persists to DB if 'store_in_db' is True.
@@ -65,17 +127,28 @@ class EmbeddingManager:
                         if request_data.store_in_db:
                             embedding_objects.append(emb_obj)
                         results.append(EmbeddingResultSchema(db_id=str(emb_obj.id), vector=vector))
-                    elif t.message_id or t.chunk_id:
+                    elif t.message_id or t.chunk_id or t.agent_output_id:
                         content = ""
                         if t.message_id:
                             msg = session.query(Message).filter_by(id=t.message_id).first()
                             content = msg.content if msg else ""
+                            parent_type = "message"
+                            parent_id = t.message_id
                         elif t.chunk_id:
                             ch = session.query(Chunk).filter_by(id=t.chunk_id).first()
                             content = ch.content if ch else ""
+                            parent_type = "chunk"
+                            parent_id = t.chunk_id
+                        elif t.agent_output_id:
+                            ao = session.query(AgentOutput).filter_by(id=t.agent_output_id).first()
+                            content = ao.content if ao else ""
+                            parent_type = "agent_output"
+                            parent_id = t.agent_output_id
 
                         if not content:
-                            logger.warning(f"Skipping empty content for {'message' if t.message_id else 'chunk'} {t.message_id or t.chunk_id}")
+                            entity_type = "message" if t.message_id else "chunk" if t.chunk_id else "agent_output"
+                            entity_id = t.message_id or t.chunk_id or t.agent_output_id
+                            logger.warning(f"Skipping empty content for {entity_type} {entity_id}")
                             continue
 
                         vector = agent.generate_embedding(str(content))
