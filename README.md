@@ -63,6 +63,7 @@ Available Commands:
 - `collection` - Commands to manage or create collections
 - `conv2` - Commands for managing conversations
 - `conversation` - Legacy conversation commands
+- `cluster` - Commands for clustering and visualizing embeddings by topic
 - `embed` - Commands for generating and storing embeddings
 - `gencom` - Commands for generating agent comments on content
 - `ingest` - Commands to ingest chat data into the database
@@ -157,6 +158,24 @@ poetry run carchive embed collection <collection-id>
 # Generate summaries for messages with embeddings
 poetry run carchive embed summarize --provider llama3.2
 ```
+
+### Clustering and Topic Analysis
+
+```shell
+# Analyze embeddings to find optimal cluster count
+poetry run carchive cluster analyze
+
+# Create clusters with KMeans algorithm and visualize
+poetry run carchive cluster kmeans --n-clusters=20 --visualization
+
+# Use density-based clustering with DBSCAN
+poetry run carchive cluster dbscan --visualization
+
+# Create hierarchical clusters with topic and subtopic levels
+poetry run carchive cluster hierarchical --primary-clusters=5 --secondary-clusters=3
+```
+
+For detailed documentation on clustering capabilities, see [Embedding Clusters Guide](docs/embedding_clusters.md).
 
 ### API Server
 

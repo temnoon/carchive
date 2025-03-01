@@ -4,9 +4,11 @@ import numpy as np
 from typing import List, Dict, Any, Tuple
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.metrics import silhouette_score
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 import uuid
 import logging
+import matplotlib.pyplot as plt
 from sqlalchemy import func
 from carchive.database.session import get_session
 from carchive.database.models import Embedding, Message, Collection, CollectionItem
@@ -171,6 +173,251 @@ class EmbeddingClusterer:
         logger.info(f"DBSCAN found {n_clusters} clusters, with {list(cluster_assignments).count(-1)} outliers")
         
         return cluster_assignments.tolist()
+        
+    @staticmethod
+    def visualize_clusters(
+        vectors: List[np.ndarray],
+        cluster_assignments: List[int],
+        n_components: int = 2,
+        output_path: str = "cluster_visualization.png"
+    ) -> None:
+        """
+        Visualize clusters using PCA for dimensionality reduction.
+        
+        Args:
+            vectors: List of embedding vectors
+            cluster_assignments: List of cluster assignments
+            n_components: Number of PCA components for visualization
+            output_path: Path to save the visualization image
+        """
+        if not vectors:
+            logger.warning("No vectors provided for visualization")
+            return
+            
+        # Stack vectors into a single numpy array
+        X = np.vstack(vectors)
+        
+        # Apply PCA for visualization
+        logger.info(f"Reducing dimensions with PCA...")
+        pca = PCA(n_components=n_components)
+        X_pca = pca.fit_transform(X)
+        
+        # Create scatter plot
+        plt.figure(figsize=(10, 8))
+        scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=cluster_assignments, cmap='viridis', s=5, alpha=0.7)
+        
+        # Add colorbar and handle outliers specially
+        if -1 in cluster_assignments:
+            # Get unique labels excluding outliers for colorbar
+            unique_labels = sorted(set(cluster_assignments))
+            if -1 in unique_labels:
+                unique_labels.remove(-1)
+                
+            # Create a color map that handles outliers specially (make them black)
+            from matplotlib.colors import ListedColormap
+            import matplotlib.cm as cm
+            viridis = cm.get_cmap('viridis', len(unique_labels))
+            colors = viridis(np.linspace(0, 1, len(unique_labels)))
+            cmap = ListedColormap(colors)
+            
+            # Recolor the scatter plot
+            outlier_mask = np.array(cluster_assignments) == -1
+            normal_mask = ~outlier_mask
+            
+            plt.scatter(X_pca[outlier_mask, 0], X_pca[outlier_mask, 1], c='black', s=5, alpha=0.3, label='Outliers')
+            scatter = plt.scatter(X_pca[normal_mask, 0], X_pca[normal_mask, 1], 
+                               c=np.array(cluster_assignments)[normal_mask], cmap=cmap, s=5, alpha=0.7)
+                               
+            plt.colorbar(scatter, label='Cluster')
+            plt.legend()
+        else:
+            plt.colorbar(scatter, label='Cluster')
+            
+        # Calculate explained variance
+        explained_var = pca.explained_variance_ratio_
+        
+        # Set plot labels
+        plt.title(f'PCA Visualization of {len(vectors)} Embeddings in {len(set(cluster_assignments)) - (1 if -1 in cluster_assignments else 0)} Clusters')
+        plt.xlabel(f'PCA Component 1 ({explained_var[0]:.1%} variance)')
+        plt.ylabel(f'PCA Component 2 ({explained_var[1]:.1%} variance)')
+        
+        # Save the plot to a file
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        logger.info(f"Visualization saved as '{output_path}'")
+        plt.close()
+    
+    @staticmethod
+    def visualize_hierarchical_clusters(
+        vectors: List[np.ndarray],
+        primary_assignments: List[int],
+        secondary_assignments: List[List[int]] = None,
+        output_path: str = "hierarchical_clusters.png"
+    ) -> None:
+        """
+        Visualize hierarchical clustering with primary and optional secondary clusters.
+        
+        Args:
+            vectors: List of embedding vectors
+            primary_assignments: List of primary cluster assignments
+            secondary_assignments: Optional list of lists containing secondary clusters per primary cluster
+            output_path: Path to save the visualization image
+        """
+        if not vectors:
+            logger.warning("No vectors provided for visualization")
+            return
+            
+        # Stack vectors into a single numpy array
+        X = np.vstack(vectors)
+        
+        # Apply PCA for visualization
+        logger.info(f"Reducing dimensions with PCA...")
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(X)
+        
+        # Create main figure
+        plt.figure(figsize=(12, 10))
+        
+        # Plot primary clusters
+        scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=primary_assignments, cmap='tab10', s=10, alpha=0.7)
+        
+        # Add cluster centroids for primary clusters
+        primary_clusters = set(primary_assignments)
+        for cluster_id in primary_clusters:
+            # Get indices for this cluster
+            indices = [i for i, c in enumerate(primary_assignments) if c == cluster_id]
+            if not indices:
+                continue
+                
+            # Calculate centroid
+            centroid = X_pca[indices].mean(axis=0)
+            
+            # Plot centroid
+            plt.plot(centroid[0], centroid[1], 'o', markerfacecolor='white', 
+                     markeredgecolor='black', markersize=12, alpha=0.9)
+            
+            # Add label
+            plt.text(centroid[0], centroid[1], str(cluster_id), 
+                    fontsize=12, ha='center', va='center', weight='bold')
+        
+        # Calculate explained variance
+        explained_var = pca.explained_variance_ratio_
+        
+        # Set plot labels
+        plt.title(f'Hierarchical Clustering Visualization of {len(vectors)} Embeddings')
+        plt.xlabel(f'PCA Component 1 ({explained_var[0]:.1%} variance)')
+        plt.ylabel(f'PCA Component 2 ({explained_var[1]:.1%} variance)')
+        plt.colorbar(scatter, label='Primary Cluster')
+        
+        # Save the plot to a file
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        logger.info(f"Visualization saved as '{output_path}'")
+        plt.close()
+        
+    @staticmethod
+    def extract_cluster_samples(
+        vectors: List[np.ndarray],
+        embedding_ids: List[uuid.UUID],
+        message_ids: List[uuid.UUID],
+        cluster_assignments: List[int],
+        samples_per_cluster: int = 5
+    ) -> dict:
+        """
+        Extract sample messages from each cluster.
+        
+        Args:
+            vectors: List of embedding vectors
+            embedding_ids: List of embedding IDs
+            message_ids: List of message IDs
+            cluster_assignments: List of cluster assignments
+            samples_per_cluster: Number of samples to extract per cluster
+            
+        Returns:
+            Dictionary mapping cluster IDs to lists of sample content
+        """
+        # Stack vectors
+        X = np.vstack(vectors)
+        
+        # Find cluster centroids
+        cluster_samples = {}
+        unique_clusters = sorted(set(cluster_assignments))
+        
+        # Calculate cluster centroids
+        centroids = {}
+        for cluster_id in unique_clusters:
+            if cluster_id == -1:  # Skip outliers
+                continue
+                
+            # Get indices for this cluster
+            indices = [i for i, c in enumerate(cluster_assignments) if c == cluster_id]
+            if not indices:
+                continue
+                
+            # Calculate centroid
+            cluster_vectors = X[indices]
+            centroid = np.mean(cluster_vectors, axis=0)
+            centroids[cluster_id] = centroid
+            
+            # Find closest vectors to centroid
+            similarities = cosine_similarity([centroid], cluster_vectors)[0]
+            closest_indices = np.argsort(similarities)[-samples_per_cluster:][::-1]
+            
+            # Map back to original indices
+            original_indices = [indices[i] for i in closest_indices]
+            
+            # Try to get message content for these embeddings
+            cluster_samples[cluster_id] = []
+            
+            for idx in original_indices:
+                # Check if we have a message ID
+                if idx < len(message_ids) and message_ids[idx]:
+                    # Try to fetch message content
+                    with get_session() as session:
+                        try:
+                            message = session.query(Message).filter(
+                                Message.id == str(message_ids[idx])
+                            ).first()
+                            
+                            if message and message.content:
+                                # Truncate to avoid very long samples
+                                content = message.content
+                                if len(content) > 1000:
+                                    content = content[:1000] + "..."
+                                    
+                                cluster_samples[cluster_id].append({
+                                    "message_id": str(message_ids[idx]),
+                                    "embedding_id": str(embedding_ids[idx]) if idx < len(embedding_ids) else None,
+                                    "role": message.role if hasattr(message, "role") else "unknown",
+                                    "content": content
+                                })
+                        except Exception as e:
+                            logger.warning(f"Error fetching message {message_ids[idx]}: {e}")
+            
+            # If we couldn't get enough content, try random sampling
+            if len(cluster_samples[cluster_id]) < samples_per_cluster:
+                with get_session() as session:
+                    try:
+                        # Get a few random messages
+                        random_messages = session.query(Message).order_by(
+                            func.random()
+                        ).limit(samples_per_cluster - len(cluster_samples[cluster_id])).all()
+                        
+                        for message in random_messages:
+                            if message.content:
+                                content = message.content
+                                if len(content) > 1000:
+                                    content = content[:1000] + "..."
+                                    
+                                cluster_samples[cluster_id].append({
+                                    "message_id": str(message.id),
+                                    "embedding_id": None,
+                                    "role": message.role if hasattr(message, "role") else "unknown",
+                                    "content": content,
+                                    "note": "Random sample (not from cluster)"
+                                })
+                    except Exception as e:
+                        logger.warning(f"Error fetching random messages: {e}")
+        
+        return cluster_samples
     
     @staticmethod
     def generate_topic_for_sample_texts(sample_texts: List[str], provider: str = "ollama") -> dict:
@@ -281,7 +528,8 @@ class EmbeddingClusterer:
         max_clusters: int = None,
         embedding_ids: List[uuid.UUID] = None,
         generate_topics: bool = False,
-        topic_provider: str = "ollama"
+        topic_provider: str = "ollama",
+        parent_collection_id: str = None
     ) -> List[Collection]:
         """
         Create collections from clusters.
@@ -422,6 +670,10 @@ class EmbeddingClusterer:
             # Add topic info to meta_info if available
             if topic_info:
                 meta_info["topic"] = topic_info
+            
+            # Add parent collection id if provided
+            if parent_collection_id:
+                meta_info["parent_collection_id"] = parent_collection_id
             
             collection_data = CollectionCreateSchema(
                 name=collection_name,

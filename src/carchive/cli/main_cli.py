@@ -15,6 +15,7 @@ from carchive.cli.api_cli import app as api_app  # Import the API CLI
 from carchive.cli.conversation_cli import conversation_app  # Import the Conversation CLI
 from carchive.cli.conversation_cli import app as new_conversation_app  # Import our new conversation CLI
 from carchive.cli.migration_cli import app as migration_app  # Import the Migration CLI
+from carchive.cli.cluster_cli import cluster_app  # Import the Clustering CLI
 
 
 logging.basicConfig(
@@ -36,6 +37,7 @@ main_app.add_typer(api_app, name="api")  # Add the API CLI
 main_app.add_typer(conversation_app, name="conversation")  # Add the Conversation CLI
 main_app.add_typer(new_conversation_app, name="conv2")  # Add our enhanced conversation CLI
 main_app.add_typer(migration_app, name="migrate")  # Add the Migration CLI
+main_app.add_typer(cluster_app, name="cluster")  # Add the Clustering CLI
 
 
 def main():
