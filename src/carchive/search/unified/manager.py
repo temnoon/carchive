@@ -16,8 +16,11 @@ from sqlalchemy.sql.expression import BinaryExpression
 
 from carchive.database.session import get_session
 from carchive.database.models import (
-    Message, Conversation, Chunk, AgentOutput, Embedding, Provider, Media, MessageMedia
+    Message, Conversation, Chunk, AgentOutput, Embedding, Provider
 )
+# Import Media and MessageMedia models, but use them carefully
+from carchive.database.models import MessageMedia
+from carchive.database.models import Media
 from carchive.search.unified.schemas import (
     SearchCriteria, SearchResult, SearchResults, SearchMode, EntityType, SortOrder
 )
@@ -95,7 +98,7 @@ class SearchManager:
                 EntityType.CONVERSATION, 
                 EntityType.CHUNK,
                 EntityType.GENCOM,
-                EntityType.MEDIA
+                # EntityType.MEDIA  # Temporarily disable Media search
             }
         else:
             # Search only the requested entity types
@@ -301,8 +304,7 @@ class SearchManager:
                 conversation_id=str(message.conversation_id) if message.conversation_id else None,
                 role=message.role,
                 metadata={
-                    "parent_id": str(message.parent_id) if message.parent_id else None,
-                    "index": message.index
+                    "parent_id": str(message.parent_id) if message.parent_id else None
                 }
             ))
         
@@ -458,8 +460,7 @@ class SearchManager:
                 conversation_id=str(conversation_id) if conversation_id else None,
                 role=role,
                 metadata={
-                    "message_id": str(chunk.message_id) if chunk.message_id else None,
-                    "index": chunk.index
+                    "message_id": str(chunk.message_id) if chunk.message_id else None
                 }
             ))
         
