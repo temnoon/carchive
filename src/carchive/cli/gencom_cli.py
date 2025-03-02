@@ -718,8 +718,7 @@ def gencom_titles(
                 target_id=str(message.id),
                 task="gencom_title",
                 prompt_template=prompt_template,
-                override=override,
-                max_words=max_words
+                override=override
             )
             
             processed += 1
