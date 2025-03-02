@@ -12,6 +12,24 @@ def convert_to_pydantic(obj) -> DBObject:
     elif isinstance(obj, Collection):
         return CollectionRead.from_orm(obj)
     elif isinstance(obj, Chunk):
-        return ChunkRead.from_orm(obj)
+        # Fix for Chunk: map content to text and meta_info to metadata
+        from carchive.schemas.db_objects import ChunkRead
+        from datetime import datetime
+        
+        # Get created_at from message if available, otherwise use current time
+        created_time = None
+        if obj.message and hasattr(obj.message, 'created_at'):
+            created_time = obj.message.created_at
+        else:
+            created_time = datetime.now()
+            
+        chunk_data = {
+            "id": obj.id,
+            "created_at": created_time,
+            "text": obj.content or "",
+            "message_id": obj.message_id,
+            "metadata": obj.meta_info or {}
+        }
+        return ChunkRead(**chunk_data)
     else:
         raise ValueError(f"Unsupported object type: {type(obj)}")

@@ -99,8 +99,27 @@ class CollectionManager:
             elif isinstance(obj, CollectionRead):
                 # Optionally handle nested collections or skip
                 continue
+            elif hasattr(obj, 'target_type') and hasattr(obj, 'id'):
+                # Handle AgentOutput objects from gencom search results
+                # We can't directly add agent outputs to collections,
+                # but we can add their target objects if available
+                if hasattr(obj, 'target_id') and obj.target_id:
+                    if obj.target_type == 'message':
+                        item = {"message_id": obj.target_id}
+                    elif obj.target_type == 'conversation':
+                        item = {"conversation_id": obj.target_id}
+                    elif obj.target_type == 'chunk':
+                        item = {"chunk_id": obj.target_id}
+                    else:
+                        # Skip if unknown target type
+                        continue
+                else:
+                    # Skip if no target_id available
+                    continue
             else:
+                # Skip unknown object types
                 continue
+                
             items.append(item)
 
         # Convert dicts to CollectionItemSchema instances
