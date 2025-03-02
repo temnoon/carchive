@@ -73,8 +73,11 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
     # Self-reference for parent-child relationship
     children = relationship("Message", 
-                           backref="parent", 
-                           remote_side=[id])
+                          back_populates="parent", 
+                          remote_side=[id])
+    parent = relationship("Message", 
+                         back_populates="children", 
+                         foreign_keys=[parent_id])
     media_associations = relationship(
         "MessageMedia", 
         back_populates="message",
@@ -83,9 +86,11 @@ class Message(Base):
     media_items = relationship(
         "Media", 
         secondary="message_media",
-        overlaps="media_associations,messages"
+        overlaps="media_associations",
+        viewonly=True  # Make this relationship read-only to prevent sync issues
     )
     chunks = relationship("Chunk", back_populates="message")
+    embeddings = relationship("Embedding", foreign_keys="[Embedding.parent_message_id]", back_populates="parent_message")
 
 class Chunk(Base):
     """Represents a chunk of a message for processing (e.g., embeddings)."""
@@ -103,6 +108,7 @@ class Chunk(Base):
 
     # Relationships
     message = relationship("Message", back_populates="chunks")
+    embeddings = relationship("Embedding", foreign_keys="[Embedding.parent_chunk_id]", back_populates="parent_chunk")
 
 class ResultsBuffer(Base):
     """Stores collections of search results and other entities."""
@@ -135,6 +141,10 @@ class BufferItem(Base):
     
     # Relationships
     buffer = relationship("ResultsBuffer", back_populates="items")
+    message = relationship("Message", foreign_keys=[message_id])
+    conversation = relationship("Conversation", foreign_keys=[conversation_id])
+    chunk = relationship("Chunk", foreign_keys=[chunk_id])
+    agent_output = relationship("AgentOutput", foreign_keys=[gencom_id], back_populates="buffer_items")
 
 class Media(Base):
     """Represents media files associated with messages."""
@@ -147,7 +157,8 @@ class Media(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    message_associations = relationship("MessageMedia", back_populates="media")
+    message_associations = relationship("MessageMedia", back_populates="media", overlaps="media_items")
+    provider = relationship("Provider")
     
 class AgentOutput(Base):
     """Stores outputs from agent (e.g., LLM) processing."""
@@ -162,6 +173,9 @@ class AgentOutput(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
+    # Relationship to buffer items
+    buffer_items = relationship("BufferItem", foreign_keys="[BufferItem.gencom_id]")
+    
 class MessageMedia(Base):
     """Links messages to media items with association type."""
     __tablename__ = "message_media"
@@ -172,8 +186,8 @@ class MessageMedia(Base):
     association_type = Column(String, nullable=True)  # 'uploaded', 'generated', etc.
     
     # Relationships
-    message = relationship("Message", back_populates="media_associations")
-    media = relationship("Media", back_populates="message_associations")
+    message = relationship("Message", back_populates="media_associations", overlaps="media_items")
+    media = relationship("Media", back_populates="message_associations", overlaps="media_items")
 
 class Embedding(Base):
     """Stores vector embeddings for messages or chunks."""
@@ -192,6 +206,10 @@ class Embedding(Base):
     # Specific parent relationships
     parent_message_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
     parent_chunk_id = Column(UUID(as_uuid=True), ForeignKey("chunks.id"), nullable=True)
+    
+    # Relationships to parent entities
+    parent_message = relationship("Message", foreign_keys=[parent_message_id], back_populates="embeddings")
+    parent_chunk = relationship("Chunk", foreign_keys=[parent_chunk_id], back_populates="embeddings")
     
     embedding_type = Column(String, nullable=True)  # 'query', 'document', 'hybrid'
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -222,3 +240,6 @@ class CollectionItem(Base):
 
     # Relationship
     collection = relationship("Collection", back_populates="items")
+    conversation = relationship("Conversation", foreign_keys=[conversation_id])
+    message = relationship("Message", foreign_keys=[message_id])
+    chunk = relationship("Chunk", foreign_keys=[chunk_id])
