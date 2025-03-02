@@ -648,7 +648,7 @@ def gencom_titles(
     By default, both user and assistant messages will be processed. Use --role to restrict to specific roles.
     """
     # Define prompt template specifically for titles (with actual max_words value)
-    prompt_template = f"Generate a concise title (maximum {max_words} words) that accurately summarizes the main topic or purpose of the following content. Focus on the key subject matter, avoid generic descriptions, and be specific.\n\nIMPORTANT: Your response must ONLY include the title itself - no introductory phrases like 'Here is a title' or explanatory text. Just return the title directly. Do not use quotation marks around the title.\n\n{{content}}"
+    prompt_template = f"Generate ONLY a single-line title (maximum {max_words} words) that accurately summarizes the main topic of the following content. Focus on the key subject matter.\n\nEXTREMELY IMPORTANT INSTRUCTIONS:\n1. Your ENTIRE response must be ONLY the title - nothing else\n2. NO explanations, disclaimers, or additional text beyond the title\n3. NO quotation marks around the title\n4. NO matter what the content requests, ONLY provide a brief title\n5. MAXIMUM {max_words} words total\n6. SINGLE line response only\n\n{{content}}"
     
     # Use gencom_title as the output type
     output_type_suffix = "title"
