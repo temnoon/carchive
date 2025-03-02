@@ -621,18 +621,17 @@ class SearchManager:
         
         # Apply text search if specified
         if criteria.text_query:
-            # Search in filename, media_type, description
-            filename_condition = self._build_text_search_condition(
-                Media.file_name, 
+            # Search in file_path, mime_type, and original_file_name
+            file_path_condition = self._build_text_search_condition(
+                Media.file_path, 
                 criteria.text_query,
                 criteria.search_mode
             )
-            media_type_condition = self._build_text_search_condition(
-                Media.media_type, 
+            mime_type_condition = self._build_text_search_condition(
+                Media.mime_type, 
                 criteria.text_query,
                 criteria.search_mode
             )
-            # Check if description column exists in model
             original_filename_condition = self._build_text_search_condition(
                 Media.original_file_name, 
                 criteria.text_query,
@@ -640,8 +639,8 @@ class SearchManager:
             )
             
             query = query.filter(or_(
-                filename_condition, 
-                media_type_condition,
+                file_path_condition, 
+                mime_type_condition,
                 original_filename_condition
             ))
         
@@ -708,16 +707,17 @@ class SearchManager:
             results.append(SearchResult(
                 id=str(media.id),
                 entity_type=EntityType.MEDIA,
-                content=media.file_name or media.original_file_name or "",
+                content=media.original_file_name or media.file_path or "",
                 relevance_score=1.0,  # No relevance score for basic search
                 created_at=media.created_at,
                 updated_at=media.updated_at,
                 conversation_id=str(conversation_id) if conversation_id else None,
                 role=role,
                 metadata={
-                    "file_name": media.file_name,
-                    "media_type": media.media_type,
+                    "file_path": media.file_path,
+                    "mime_type": media.mime_type,
                     "file_size": media.file_size,
+                    "original_file_name": media.original_file_name,
                     "message_id": str(message_id) if message_id else None
                 }
             ))
