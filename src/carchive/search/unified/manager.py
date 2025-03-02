@@ -10,7 +10,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Any, Tuple, Set, cast
 from datetime import datetime, timedelta
-from sqlalchemy import or_, and_, func, text, desc, asc
+from sqlalchemy import or_, and_, func, text, desc, asc, String, cast
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql.expression import BinaryExpression
 
