@@ -16,7 +16,7 @@ from sqlalchemy.sql.expression import BinaryExpression
 
 from carchive.database.session import get_session
 from carchive.database.models import (
-    Message, Conversation, Chunk, AgentOutput, Embedding, Provider, Media, MediaMessage
+    Message, Conversation, Chunk, AgentOutput, Embedding, Provider, Media, MessageMedia
 )
 from carchive.search.unified.schemas import (
     SearchCriteria, SearchResult, SearchResults, SearchMode, EntityType, SortOrder
@@ -644,14 +644,14 @@ class SearchManager:
                 description_condition
             ))
         
-        # Apply role filters via MediaMessage and Message joins
+        # Apply role filters via MessageMedia and Message joins
         if criteria.roles:
             role_message_ids = session.query(Message.id).filter(
                 Message.role.in_([r.lower() for r in criteria.roles])
             ).subquery()
             
-            media_ids = session.query(MediaMessage.media_id).filter(
-                MediaMessage.message_id.in_(role_message_ids)
+            media_ids = session.query(MessageMedia.media_id).filter(
+                MessageMedia.message_id.in_(role_message_ids)
             ).subquery()
             
             query = query.filter(Media.id.in_(media_ids))
@@ -668,8 +668,8 @@ class SearchManager:
                     Conversation.provider_id.in_(provider_ids)
                 ).subquery()
                 
-                provider_media_ids = session.query(MediaMessage.media_id).filter(
-                    MediaMessage.message_id.in_(provider_message_ids)
+                provider_media_ids = session.query(MessageMedia.media_id).filter(
+                    MessageMedia.message_id.in_(provider_message_ids)
                 ).subquery()
                 
                 query = query.filter(Media.id.in_(provider_media_ids))
@@ -696,7 +696,7 @@ class SearchManager:
             role = None
             
             # Find first linked message (if any)
-            media_message = session.query(MediaMessage).filter_by(media_id=media.id).first()
+            media_message = session.query(MessageMedia).filter_by(media_id=media.id).first()
             if media_message:
                 message_id = media_message.message_id
                 message = session.query(Message).filter_by(id=message_id).first()
