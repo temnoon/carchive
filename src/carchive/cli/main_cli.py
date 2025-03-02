@@ -21,6 +21,7 @@ from carchive.cli.conversation_cli import app as new_conversation_app  # Import 
 from carchive.cli.migration_cli import app as migration_app  # Import the Migration CLI
 from carchive.cli.cluster_cli import cluster_app  # Import the Clustering CLI
 from carchive.cli.unified_search_cli import search_app as unified_search_app  # Import the Unified Search CLI
+from carchive.cli.buffer_cli import buffer_app  # Import the Buffer CLI
 
 
 logging.basicConfig(
@@ -44,6 +45,7 @@ main_app.add_typer(conversation_app, name="conversation")  # Add the Conversatio
 main_app.add_typer(new_conversation_app, name="conv2")  # Add our enhanced conversation CLI
 main_app.add_typer(migration_app, name="migrate")  # Add the Migration CLI
 main_app.add_typer(cluster_app, name="cluster")  # Add the Clustering CLI
+main_app.add_typer(buffer_app, name="buffer")  # Add the Buffer CLI
 
 
 def main():
