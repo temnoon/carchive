@@ -614,6 +614,128 @@ def purge_gencom(
         else:
             typer.echo("Operation cancelled.")
 
+@gencom_app.command("titles")
+def gencom_titles(
+    max_words: int = typer.Option(
+        12, "--max-words", help="Maximum words for the generated titles."
+    ),
+    provider: str = typer.Option(
+        "ollama", "--provider", help="Content agent provider to use (e.g., 'ollama', 'openai')."
+    ),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", help="Optional limit on the number of messages to process."
+    ),
+    override: bool = typer.Option(
+        False, "--override", help="Force reprocessing even if a title already exists."
+    ),
+    roles: Optional[List[str]] = typer.Option(
+        ["assistant", "user"], "--role", help="Only process messages with this role (can be specified multiple times)."
+    ),
+    preview_prompt: bool = typer.Option(
+        True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
+    ),
+):
+    """
+    Generate titles for all messages that meet the criteria.
+    
+    This command analyzes each message's content and generates a concise title (up to the specified word count)
+    that summarizes the message's main topic or purpose. Titles are stored as AgentOutput objects with 
+    output_type 'gencom_title'.
+    
+    By default, both user and assistant messages will be processed. Use --role to restrict to specific roles.
+    """
+    # Define prompt template specifically for titles
+    prompt_template = "Generate a concise title (about {max_words} words) that accurately summarizes the main topic or purpose of the following content. Focus on the key subject matter, avoid generic descriptions, and be specific:\n\n{content}"
+    
+    # Use gencom_title as the output type
+    output_type_suffix = "title"
+    
+    # Create effective prompt with max_words value interpolated
+    effective_prompt = prompt_template.format(max_words=max_words, content="{content}")
+    
+    # Show prompt template preview and get confirmation if enabled
+    if preview_prompt:
+        typer.echo(f"\nPrompt template that will be used:\n---\n{effective_prompt}\n---")
+        typer.echo(f"Output type: gencom_title")
+        if typer.confirm("Do you want to proceed with this prompt?", default=True):
+            try:
+                manager = ContentTaskManager(provider=provider)
+            except ValueError as e:
+                typer.echo(f"Error: {e}")
+                typer.echo("Available content providers: ollama, openai")
+                raise typer.Exit(code=1)
+        else:
+            typer.echo("Operation cancelled.")
+            raise typer.Exit(code=0)
+    else:
+        # Skip preview and proceed directly
+        try:
+            manager = ContentTaskManager(provider=provider)
+        except ValueError as e:
+            typer.echo(f"Error: {e}")
+            typer.echo("Available content providers: ollama, openai")
+            raise typer.Exit(code=1)
+    
+    with get_session() as session:
+        # Build base query: messages with non-null content
+        base_query = session.query(Message).filter(Message.content.isnot(None))
+        
+        # Apply role filter as IN operator for multiple roles
+        if roles:
+            base_query = base_query.filter(Message.role.in_([r.lower() for r in roles]))
+        
+        # Apply limit if specified
+        if limit:
+            base_query = base_query.limit(limit)
+            
+        messages_to_process = base_query.all()
+    
+    total = len(messages_to_process)
+    typer.echo(f"Found {total} messages to process for titles.")
+
+    processed = 0
+    failed = 0
+    skipped = 0
+    
+    for message in messages_to_process:
+        try:
+            # Check if an output already exists for this message
+            with get_session() as session:
+                existing = session.query(AgentOutput).filter(
+                    AgentOutput.target_type == "message",
+                    AgentOutput.target_id == message.id,
+                    AgentOutput.output_type == "gencom_title"
+                ).first()
+                
+                if existing and not override:
+                    if processed % 50 == 0:  # Report progress every 50 items
+                        typer.echo(f"Message {message.id} already has a title, skipping. (Progress: {processed}/{total})")
+                    skipped += 1
+                    continue
+            
+            output = manager.run_task_for_target(
+                target_type="message",
+                target_id=str(message.id),
+                task="gencom_title",
+                prompt_template=prompt_template,
+                override=override,
+                max_words=max_words
+            )
+            
+            processed += 1
+            
+            # Show progress every 10 messages
+            if processed % 10 == 0:
+                typer.echo(f"Generated title for message {message.id}: \"{output.content}\" (Progress: {processed}/{total})")
+                    
+        except Exception as e:
+            typer.echo(f"Error processing message {message.id}: {e}")
+            failed += 1
+
+    result_msg = f"Title generation complete.\n"
+    result_msg += f"Processed: {processed}, Failed: {failed}, Skipped: {skipped}, Total: {total}"
+    typer.echo(result_msg)
+    
 @gencom_app.command("all")
 def gencom_all(
     min_word_count: int = typer.Option(
