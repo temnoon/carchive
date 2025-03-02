@@ -37,8 +37,7 @@ carchive = "carchive.cli.main_cli:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.2,<8.0"
-# Resolve chatgpt-parser dependency conflict
-chatgpt-parser = {version = "^0.1", optional = true}
+# Note: Keep chatgpt-parser separate since it has a conflicting pytest dependency
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
