@@ -4,6 +4,10 @@ Top-level CLI that aggregates sub-apps from ingestion_cli, search_cli, etc.
 
 import logging
 import typer
+# Configure logging - Disable matplotlib debug messages and other verbose logs
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+
 from carchive.cli.summarize_cli import summarize_app
 from carchive.cli.ingestion_cli import ingest_app
 from carchive.cli.search_cli import search_app
@@ -16,6 +20,7 @@ from carchive.cli.conversation_cli import conversation_app  # Import the Convers
 from carchive.cli.conversation_cli import app as new_conversation_app  # Import our new conversation CLI
 from carchive.cli.migration_cli import app as migration_app  # Import the Migration CLI
 from carchive.cli.cluster_cli import cluster_app  # Import the Clustering CLI
+from carchive.cli.unified_search_cli import search_app as unified_search_app  # Import the Unified Search CLI
 
 
 logging.basicConfig(
@@ -28,6 +33,7 @@ main_app = typer.Typer(help="carchive CLI")
 # Add subcommands as Typer sub-apps:
 main_app.add_typer(ingest_app, name="ingest")
 main_app.add_typer(search_app, name="search")
+main_app.add_typer(unified_search_app, name="find")  # Add the unified search under "find" command
 main_app.add_typer(embed_app, name="embed")
 main_app.add_typer(collection_app, name="collection")
 main_app.add_typer(summarize_app, name="summarize")
