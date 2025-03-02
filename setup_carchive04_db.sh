@@ -4,7 +4,7 @@ set -e
 # Configuration
 DB_NAME="carchive04_db"
 DB_USER="carchive_app"
-DB_PASSWORD="hozcan-1ciksi-Wivkab"  # Change this in production
+DB_PASSWORD="YOUR_DB_PASSWORD"  # Replace with a secure password
 SCHEMA_FILE="carchive04_schema.sql"
 
 # Create database and user
@@ -22,4 +22,4 @@ psql -U $DB_USER -d $DB_NAME -f $SCHEMA_FILE
 
 echo "Database setup complete\!"
 echo "You can now run the migration using:"
-echo "poetry run carchive migrate chatgpt --db-name=$DB_NAME --db-user=$DB_USER --db-password=$DB_PASSWORD chat2/conversations.json"
+echo "poetry run carchive migrate chatgpt --db-name=$DB_NAME --db-user=$DB_USER --db-password=YOUR_DB_PASSWORD chat2/conversations.json"
