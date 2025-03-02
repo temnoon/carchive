@@ -1,6 +1,9 @@
 # Carchive
 
-Carchive is a modern conversation archiving and analysis system designed to store, organize, search, and analyze text-based conversations using vector embeddings and AI. It supports importing conversations from multiple providers including ChatGPT, Claude, and Perplexity.
+Carchive is a modern conversation archiving and analysis system designed to store, organize, search, and analyze text-based conversations using vector embeddings and AI. It supports importing conversations from multiple providers including ChatGPT, Claude and eventually others.
+Visualization of clusters:
+
+ ![Cluster Visualization](https://temnoon.com/wp-content/uploads/2025/03/kmeans_20_clusters.png)
 
 ## Features
 
