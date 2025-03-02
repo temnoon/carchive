@@ -644,19 +644,28 @@ def gencom_titles(
     
     By default, both user and assistant messages will be processed. Use --role to restrict to specific roles.
     """
-    # Define prompt template specifically for titles
-    prompt_template = "Generate a concise title (about {max_words} words) that accurately summarizes the main topic or purpose of the following content. Focus on the key subject matter, avoid generic descriptions, and be specific:\n\n{content}"
+    # Define prompt template specifically for titles (with actual max_words value)
+    prompt_template = f"Generate a concise title (about {max_words} words) that accurately summarizes the main topic or purpose of the following content. Focus on the key subject matter, avoid generic descriptions, and be specific:\n\n{{content}}"
     
     # Use gencom_title as the output type
     output_type_suffix = "title"
     
-    # Create effective prompt with max_words value interpolated
-    effective_prompt = prompt_template.format(max_words=max_words, content="{content}")
+    # Set minimum word count for eligible messages
+    min_word_count = 30  # Only process messages with at least 30 words
     
     # Show prompt template preview and get confirmation if enabled
     if preview_prompt:
-        typer.echo(f"\nPrompt template that will be used:\n---\n{effective_prompt}\n---")
+        typer.echo(f"\nPrompt template that will be used:\n---\n{prompt_template}\n---")
         typer.echo(f"Output type: gencom_title")
+        typer.echo(f"Minimum word count: {min_word_count} words per message")
+        
+        # Verify that {content} placeholder is present
+        if "{content}" not in prompt_template:
+            typer.echo("\nWARNING: The prompt template doesn't contain the {content} placeholder!")
+            typer.echo("Each message's content needs to be inserted where {content} appears.")
+            if not typer.confirm("Are you SURE you want to proceed with this broken prompt?", default=False):
+                typer.echo("Operation cancelled. Please add {content} to your prompt template.")
+                raise typer.Exit(code=1)
         if typer.confirm("Do you want to proceed with this prompt?", default=True):
             try:
                 manager = ContentTaskManager(provider=provider)
@@ -677,8 +686,12 @@ def gencom_titles(
             raise typer.Exit(code=1)
     
     with get_session() as session:
-        # Build base query: messages with non-null content
-        base_query = session.query(Message).filter(Message.content.isnot(None))
+        # Build base query: messages with non-null content and minimum word count
+        word_count_expr = func.array_length(func.regexp_split_to_array(Message.content, r'\s+'), 1)
+        base_query = session.query(Message).filter(
+            Message.content.isnot(None),
+            word_count_expr >= min_word_count
+        )
         
         # Apply role filter as IN operator for multiple roles
         if roles:
