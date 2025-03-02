@@ -623,7 +623,7 @@ class SearchManager:
         if criteria.text_query:
             # Search in filename, media_type, description
             filename_condition = self._build_text_search_condition(
-                Media.filename, 
+                Media.file_name, 
                 criteria.text_query,
                 criteria.search_mode
             )
@@ -632,8 +632,9 @@ class SearchManager:
                 criteria.text_query,
                 criteria.search_mode
             )
-            description_condition = self._build_text_search_condition(
-                Media.description, 
+            # Check if description column exists in model
+            original_filename_condition = self._build_text_search_condition(
+                Media.original_file_name, 
                 criteria.text_query,
                 criteria.search_mode
             )
@@ -641,7 +642,7 @@ class SearchManager:
             query = query.filter(or_(
                 filename_condition, 
                 media_type_condition,
-                description_condition
+                original_filename_condition
             ))
         
         # Apply role filters via MessageMedia and Message joins
@@ -707,18 +708,16 @@ class SearchManager:
             results.append(SearchResult(
                 id=str(media.id),
                 entity_type=EntityType.MEDIA,
-                content=media.description or media.filename or "",
+                content=media.file_name or media.original_file_name or "",
                 relevance_score=1.0,  # No relevance score for basic search
                 created_at=media.created_at,
                 updated_at=media.updated_at,
                 conversation_id=str(conversation_id) if conversation_id else None,
                 role=role,
                 metadata={
-                    "filename": media.filename,
+                    "file_name": media.file_name,
                     "media_type": media.media_type,
                     "file_size": media.file_size,
-                    "width": media.width,
-                    "height": media.height,
                     "message_id": str(message_id) if message_id else None
                 }
             ))
