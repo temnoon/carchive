@@ -634,6 +634,9 @@ def gencom_titles(
     preview_prompt: bool = typer.Option(
         True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
     ),
+    verbose: bool = typer.Option(
+        True, "--verbose/--quiet", help="Show detailed progress for each title generation."
+    ),
 ):
     """
     Generate titles for all messages that meet the criteria.
@@ -645,7 +648,7 @@ def gencom_titles(
     By default, both user and assistant messages will be processed. Use --role to restrict to specific roles.
     """
     # Define prompt template specifically for titles (with actual max_words value)
-    prompt_template = f"Generate a concise title (about {max_words} words) that accurately summarizes the main topic or purpose of the following content. Focus on the key subject matter, avoid generic descriptions, and be specific:\n\n{{content}}"
+    prompt_template = f"Generate a concise title (maximum {max_words} words) that accurately summarizes the main topic or purpose of the following content. Focus on the key subject matter, avoid generic descriptions, and be specific.\n\nIMPORTANT: Your response must ONLY include the title itself - no introductory phrases like 'Here is a title' or explanatory text. Just return the title directly. Do not use quotation marks around the title.\n\n{{content}}"
     
     # Use gencom_title as the output type
     output_type_suffix = "title"
@@ -721,7 +724,7 @@ def gencom_titles(
                 ).first()
                 
                 if existing and not override:
-                    if processed % 50 == 0:  # Report progress every 50 items
+                    if verbose and processed % 50 == 0:  # Report progress every 50 items in verbose mode
                         typer.echo(f"Message {message.id} already has a title, skipping. (Progress: {processed}/{total})")
                     skipped += 1
                     continue
@@ -736,9 +739,11 @@ def gencom_titles(
             
             processed += 1
             
-            # Show progress every 10 messages
-            if processed % 10 == 0:
+            # Show progress based on verbose setting
+            if verbose:
                 typer.echo(f"Generated title for message {message.id}: \"{output.content}\" (Progress: {processed}/{total})")
+            elif processed % 10 == 0:  # In quiet mode, just show progress every 10 messages
+                typer.echo(f"Progress: {processed}/{total}")
                     
         except Exception as e:
             typer.echo(f"Error processing message {message.id}: {e}")
@@ -797,6 +802,9 @@ def gencom_all(
     ),
     preview_prompt: bool = typer.Option(
         True, "--preview-prompt/--no-preview-prompt", help="Show prompt preview and confirm before proceeding."
+    ),
+    verbose: bool = typer.Option(
+        True, "--verbose/--quiet", help="Show detailed progress for each item processed."
     )
 ):
     """
@@ -996,6 +1004,8 @@ def gencom_all(
 
     total = len(items_to_process)
     logger.info(f"Found {total} {target_type}s to process.")
+    if verbose:
+        typer.echo(f"Found {total} {target_type}s to process.")
 
     processed = 0
     failed = 0
@@ -1014,6 +1024,8 @@ def gencom_all(
                 ).first()
                 
                 if existing and not override:
+                    if verbose:
+                        typer.echo(f"{target_type.capitalize()} {item.id} already has a {actual_output_type} output, skipping.")
                     logger.info(f"{target_type.capitalize()} {item.id} already has a {actual_output_type} output, skipping.")
                     skipped += 1
                     continue
@@ -1028,8 +1040,16 @@ def gencom_all(
                 max_tokens=max_tokens
             )
             
-            logger.info(f"{target_type.capitalize()} {item.id} processed (AgentOutput ID: {output.id}).")
             processed += 1
+            
+            if verbose:
+                typer.echo(f"{target_type.capitalize()} {item.id} processed (AgentOutput ID: {output.id}).")
+                typer.echo(f"Output: \"{output.content[:100]}{'...' if len(output.content) > 100 else ''}\"")
+                typer.echo(f"Progress: {processed}/{total}")
+            elif processed % 10 == 0:
+                typer.echo(f"Progress: {processed}/{total}")
+                
+            logger.info(f"{target_type.capitalize()} {item.id} processed (AgentOutput ID: {output.id}).")
             
             # Generate embedding if requested
             if generate_embedding and embedding_manager:
@@ -1039,13 +1059,18 @@ def gencom_all(
                         parent_ids=[str(output.id)],
                         parent_type="agent_output"
                     )
+                    if verbose:
+                        typer.echo(f"Generated embedding for comment (Embedding ID: {embedding[0].id}).")
                     logger.info(f"Generated embedding for comment (Embedding ID: {embedding[0].id}).")
                     embedding_success += 1
                 except Exception as embed_err:
+                    if verbose:
+                        typer.echo(f"Error generating embedding for output {output.id}: {embed_err}")
                     logger.error(f"Error generating embedding for output {output.id}: {embed_err}")
                     embedding_failed += 1
                     
         except Exception as e:
+            typer.echo(f"Error processing {target_type} {item.id}: {e}")
             logger.error(f"Error processing {target_type} {item.id}: {e}")
             failed += 1
 
