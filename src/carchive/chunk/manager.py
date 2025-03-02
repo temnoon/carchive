@@ -482,10 +482,10 @@ class ChunkManager:
                 ]
                 db_query = db_query.filter(Chunk.message_id.in_(message_ids))
             
-            # Order by relevance (simple approach)
-            # For a more sophisticated approach, use a full-text search or ranking function
+            # Order by position instead of trying to use position() function
+            # which isn't standardized across database backends
             db_query = db_query.order_by(
-                func.position(func.lower(Chunk.content), func.lower(query)).asc()
+                Chunk.position.asc()
             )
             
             # Limit results

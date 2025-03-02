@@ -138,8 +138,11 @@ class Chunker:
                     message, session, options.separator, options.keep_separator
                 )
             
-            # Commit chunks to database
+            # Commit chunks to database and refresh
             session.commit()
+            # Refresh chunks to ensure they're bound to the session
+            for chunk in chunks:
+                session.refresh(chunk)
             
             # Return result
             return ChunkResult(
