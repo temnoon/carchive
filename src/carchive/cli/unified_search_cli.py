@@ -289,8 +289,9 @@ def _format_results_as_csv(results, show_metadata=False) -> str:
     rows = [header]
     for result in results.results:
         content = result.content or ""
-        # Escape CSV special characters
-        content = f'"{content.replace(\'"\', \'""\')}".strip()[:1000]'
+        # Escape CSV special characters and limit length
+        content = content.replace('"', '""').strip()[:1000]
+        content = f'"{content}"'
         
         row = f"{result.id},{result.entity_type},{content},{result.created_at.isoformat()}"
         
