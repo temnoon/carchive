@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>{{ title }}</title>
+  <style>
+    body { 
+      font-family: "Times New Roman", Times, serif;
+      margin: 2em auto;
+      max-width: 800px;
+      line-height: 1.6;
+      color: #333;
+      background: #fdfdfd;
+    }
+    h1, h2, h3, h4 { 
+      font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      color: #333;
+      line-height: 1.2;
+    }
+    h1 { font-size: 2em; margin-bottom: 1em; }
+    h2 { font-size: 1.7em; margin-top: 1.5em; }
+    h3 { font-size: 1.4em; }
+    h4 { font-size: 1.2em; }
+    p { margin-bottom: 1em; text-align: justify; }
+    
+    .role-user, .role-assistant, .role-tool, .role-unknown {
+      margin: 1.5em 0;
+      padding: 1em;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .role-user { 
+      background: #f8f9fa; 
+      border-left: 5px solid #4285f4;
+    }
+    .role-assistant { 
+      background: #f8f9fa; 
+      border-left: 5px solid #34a853; 
+    }
+    .role-tool { 
+      background: #f8f9fa; 
+      border-left: 5px solid #fbbc05; 
+    }
+    .role-unknown { 
+      background: #f8f9fa; 
+      border-left: 5px solid #ea4335; 
+    }
+    
+    hr { 
+      border: none; 
+      border-top: 1px solid #ddd; 
+      margin: 2em 0; 
+    }
+    
+    .conversation-info {
+      background-color: #f8f9fa;
+      padding: 0.8em;
+      margin-bottom: 1em;
+      border-left: 4px solid #4285f4;
+      font-size: 0.9em;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+    
+    .metadata-section {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      margin-top: 1em;
+      padding: 0.8em;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    
+    pre { 
+      background: #f5f5f5; 
+      padding: 1em; 
+      border-radius: 5px; 
+      overflow: auto;
+      font-family: "Consolas", "Courier New", monospace;
+      border: 1px solid #ddd;
+    }
+    
+    code { 
+      background: #f5f5f5; 
+      padding: 0.2em 0.4em; 
+      border-radius: 3px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.9em;
+    }
+    
+    em, i {
+      font-style: italic;
+    }
+    
+    img { 
+      max-width: 100%; 
+      height: auto; 
+      margin: 1em auto;
+      display: block;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    blockquote {
+      margin: 1em 0;
+      padding: 0.5em 1em;
+      border-left: 5px solid #ddd;
+      background: #f8f9fa;
+      font-style: italic;
+    }
+    
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+    }
+    
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.5em;
+    }
+    
+    th {
+      background: #f5f5f5;
+      text-align: left;
+    }
+    
+    .message-header {
+      font-size: 0.9em;
+      color: #666;
+      margin-bottom: 0.5em;
+    }
+    
+    .color-key {
+      margin-top: 3em;
+      padding: 1em;
+      border-top: 1px solid #ddd;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 0.9em;
+      color: #666;
+    }
+    
+    .color-key span {
+      display: inline-block;
+      margin-right: 1em;
+      padding: 0.2em 0.5em;
+      border-radius: 3px;
+    }
+    
+    /* Page numbers for PDF */
+    @page {
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+  </style>
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [["\\(","\\)"], ["$","$"]],
+        displayMath: [["\\[","\\]"], ["$$","$$"]]
+      },
+      options: {
+        processHtmlClass: "arithmatex"
+      },
+      startup: {
+        typeset: true
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Directly process any bracket-enclosed math blocks
+      // We need to very carefully search for [<br>\LaTeX content<br>] patterns
+      document.querySelectorAll('p, div').forEach(function(element) {
+        var html = element.innerHTML;
+        
+        // Match pattern: [<br> ... <br>]
+        var bracketMathPattern = /\[\s*<br>\s*([\s\S]*?)\s*<br>\s*\]/g;
+        var matches = html.matchAll(bracketMathPattern);
+        
+        // Store replacements to make
+        var replacements = [];
+        
+        // Process each match
+        for (const match of matches) {
+          var fullMatch = match[0];
+          var mathContent = match[1];
+          
+          // Create a wrapped math element
+          var mathHTML = '<div class="arithmatex">\\[' + mathContent + '\\]</div>';
+          replacements.push({from: fullMatch, to: mathHTML});
+        }
+        
+        // Apply replacements in reverse order to maintain indices
+        replacements.reverse().forEach(function(rep) {
+          html = html.replace(rep.from, rep.to);
+        });
+        
+        // Update the element if changes were made
+        if (replacements.length > 0) {
+          element.innerHTML = html;
+        }
+      });
+      
+      // Additional specific pattern for LaTeX blocks that appear after a <br> tag
+      document.querySelectorAll('p').forEach(function(p) {
+        var html = p.innerHTML;
+        
+        // Pattern: Text with <br>[<br>math content<br>]
+        if (html && html.includes('<br>[<br>') && html.includes('<br>]')) {
+          // Split the paragraph at the beginning of the math block
+          var parts = html.split('<br>[<br>');
+          var beforeMath = parts[0];
+          var afterStart = parts[1];
+          
+          // Find the end of the math content
+          var mathEndIndex = afterStart.indexOf('<br>]');
+          var mathContent = afterStart.substring(0, mathEndIndex);
+          var afterMath = afterStart.substring(mathEndIndex + 5); // Length of '<br>]'
+          
+          // Create a new structure
+          var newHTML = beforeMath;
+          newHTML += '<div class="arithmatex">\\[' + mathContent + '\\]</div>';
+          newHTML += afterMath;
+          
+          p.innerHTML = newHTML;
+        }
+      });
+      
+      // Clean up all math elements for better rendering
+      document.querySelectorAll('.arithmatex').forEach(function(el) {
+        var text = el.textContent;
+        
+        // Fix common issues with LaTeX
+        // 1. Remove excess backslashes
+        text = text.replace(/\\\\([()])/g, '\\$1');
+        text = text.replace(/\\\\([\[\]])/g, '\\$1');
+        
+        // 2. Remove all nested delimiters that cause red text
+        text = text.replace(/\\[\(\[]([^\\]*)\\[\)\]]/g, '$1');
+        
+        // 3. Ensure proper wrapping
+        if (text.includes('\\[') && text.includes('\\]')) {
+          // Already has display math delimiters
+          // Just clean up any starting/ending whitespace
+          text = text.replace(/^\s*(\\\[.*\\\])\s*$/, '$1');
+          
+          // Remove any inline delimiters inside display math
+          text = text.replace(/\\\[(.*?)\\[\(\[](.+?)\\[\)\]](.*?)\\\]/g, '\\[$1$2$3\\]');
+        } else if (text.includes('\\(') && text.includes('\\)')) {
+          // Already has inline math delimiters
+          text = text.replace(/^\s*(\\\(.*\\\))\s*$/, '$1');
+          
+          // Remove any nested delimiters
+          text = text.replace(/\\\((.*?)\\[\(\[](.+?)\\[\)\]](.*?)\\\)/g, '\\($1$2$3\\)');
+        } else if (text.includes('[') && text.includes(']')) {
+          // Convert brackets to proper display math
+          text = text.replace(/^\s*\[(.*)\]\s*$/, '\\[$1\\]');
+        }
+        
+        // Update the element
+        el.textContent = text;
+      });
+      
+      // Typeset the math - force processing in case MathJax missed some elements
+      if (typeof MathJax !== 'undefined') {
+        if (typeof MathJax.typeset === 'function') {
+          MathJax.typeset();
+        } else if (typeof MathJax.Hub !== 'undefined' && typeof MathJax.Hub.Typeset === 'function') {
+          MathJax.Hub.Typeset();
+        }
+      }
+    });
+    
+    // Additional backup typesetting on load
+    window.addEventListener('load', function() {
+      if (typeof MathJax !== 'undefined' && typeof MathJax.typeset === 'function') {
+        MathJax.typeset();
+      }
+    });
+  </script>
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  {% if subtitle %}
+  <h3>{{ subtitle }}</h3>
+  {% endif %}
+  
+  <div class="content">
+    {% for item in items %}
+    <div class="role-{{ item.role }}">
+      {% if item.header %}
+      <div class="message-header">{{ item.header }}</div>
+      {% endif %}
+      
+      <div class="message-content">{{ item.content | safe }}</div>
+      
+      {% if item.metadata and include_metadata %}
+      <div class="metadata-section">
+        <strong>Metadata:</strong>
+        <pre>{{ item.metadata | tojson(indent=2) }}</pre>
+      </div>
+      {% endif %}
+    </div>
+    {% if not loop.last %}<hr>{% endif %}
+    {% endfor %}
+  </div>
+  
+  {% if show_color_key %}
+  <div class="color-key">
+    <h2>Color Key</h2>
+    <span class="role-user">User</span>
+    <span class="role-assistant">Assistant</span>
+    <span class="role-tool">Tool</span>
+    <span class="role-unknown">Unknown</span>
+  </div>
+  {% endif %}
+</body>
+</html>

@@ -25,6 +25,23 @@ This project uses PostgreSQL with pgvector for vector embeddings, requiring prop
 
 ## Important Implementation Details
 
+### LaTeX Rendering
+The project supports rendering LaTeX math notation in conversations. A working implementation
+that correctly handles both inline and display math is preserved in:
+`docs/working_latex_renderer_backup.py`
+
+This file should be used as a reference when troubleshooting LaTeX rendering issues. The key features:
+- Converts square bracket notation `[...]` to display math in preprocessing
+- Uses dollar sign notation for LaTeX during intermediate processing
+- Handles nested delimiters to prevent displaying red text like `\(` and `\)`
+- Post-processes HTML to ensure proper rendering of math blocks
+
+When adjusting LaTeX rendering, be careful not to break the following:
+1. Inline LaTeX expressions (within text)
+2. Display math using square brackets on separate lines
+3. LaTeX environments like align, equation, etc.
+4. Reference numbers in square brackets (should not be treated as math)
+
 ### Conversation Timestamps
 Conversations can have timestamps in multiple formats:
 1. Explicit `create_time` and `update_time` fields in meta_info (as Unix timestamps)
