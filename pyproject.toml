@@ -31,6 +31,7 @@ psycopg2-binary = "^2.9.9"  # Alternative to psycopg2 that doesn't require syste
 matplotlib = "^3.10.1"
 pylatexenc = "^2.10"
 weasyprint = "^64.1"
+groq = "^0.4.1"     # Groq API client
 
 [tool.poetry.scripts]
 carchive = "carchive.cli.main_cli:main"

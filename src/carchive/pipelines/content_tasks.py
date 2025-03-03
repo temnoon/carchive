@@ -79,23 +79,46 @@ class ContentTaskManager:
             if existing and not override:
                 return existing
             
-            # Convert string context to dict format if provided
+            # Check if prompt_template contains a system prompt in the <|system|> format
             context_dict = None
-            if context:
+            effective_prompt = prompt_template
+            
+            # Extract system prompt if present in the template
+            if prompt_template and "<|system|>" in prompt_template and "</|system|>" in prompt_template:
+                # Extract the system prompt from the template
+                system_start = prompt_template.find("<|system|>") + len("<|system|>")
+                system_end = prompt_template.find("</|system|>")
+                if system_start > 0 and system_end > system_start:
+                    system_prompt = prompt_template[system_start:system_end].strip()
+                    context_dict = {"system_prompt": system_prompt}
+                    
+                    # Remove the system prompt section from the template
+                    user_start = prompt_template.find("<|user|>")
+                    if user_start > 0:
+                        # Preserve only the user part and beyond
+                        user_part = prompt_template[user_start:]
+                        # Remove the <|user|> tags
+                        user_part = user_part.replace("<|user|>", "").replace("</|user|>", "")
+                        # Remove the <|assistant|> tag if present
+                        user_part = user_part.replace("<|assistant|>", "")
+                        effective_prompt = user_part.strip()
+                
+            # Handle string context if provided and not already extracted from template
+            elif context:
                 context_dict = {"system_prompt": context}
 
             # If max_words or max_tokens is specified, update the prompt template
-            effective_prompt = prompt_template
-            
             if max_words:
                 if effective_prompt:
-                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
+                    if "<|system|>" not in effective_prompt:  # Only add if not already in a structured format
+                        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_words} words."
                 else:
                     effective_prompt = f"Please limit your response to approximately {max_words} words.\n\n{{content}}"
                     
             if max_tokens:
                 if effective_prompt:
-                    effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
+                    if "<|system|>" not in effective_prompt:  # Only add if not already in a structured format
+                        effective_prompt = f"{effective_prompt}\n\nPlease limit your response to approximately {max_tokens} tokens."
                 else:
                     effective_prompt = f"Please limit your response to approximately {max_tokens} tokens.\n\n{{content}}"
             

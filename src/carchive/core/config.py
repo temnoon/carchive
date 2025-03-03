@@ -17,6 +17,7 @@ import os
 class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(default=None)
     anthropic_api_key: Optional[str] = Field(default=None)
+    groq_api_key: Optional[str] = Field(default=None)
     ollama_url: str = Field(default="http://localhost:11434")
     # Default providers
     embedding_provider: str = Field(default="ollama")
@@ -66,6 +67,7 @@ settings = Settings()
 DATABASE_URL = settings.build_database_url()
 OPENAI_API_KEY = settings.get_secure_value("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = settings.get_secure_value("ANTHROPIC_API_KEY")
+GROQ_API_KEY = settings.get_secure_value("GROQ_API_KEY")
 OLLAMA_URL = settings.get_secure_value("OLLAMA_URL")
 # Default providers
 DEFAULT_EMBEDDING_PROVIDER = EMBEDDING_PROVIDER = settings.embedding_provider

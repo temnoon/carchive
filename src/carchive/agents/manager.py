@@ -11,7 +11,8 @@ from carchive.core.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_DIMENSIONS,
     VISION_MODEL_NAME,
-    TEXT_MODEL_NAME
+    TEXT_MODEL_NAME,
+    GROQ_API_KEY
 )
 from carchive.agents.base.agent import BaseAgent
 from carchive.agents.base.embedding_agent import BaseEmbeddingAgent
@@ -33,15 +34,19 @@ from carchive.agents.providers.ollama.multimodal_agent import OllamaMultimodalAg
 from carchive.agents.providers.anthropic.chat_agent import AnthropicChatAgent
 from carchive.agents.providers.anthropic.multimodal_agent import AnthropicMultimodalAgent
 
+from carchive.agents.providers.groq.chat_agent import GroqChatAgent
+from carchive.agents.providers.groq.content_agent import GroqContentAgent
+
 class AgentManager:
     """
     Factory class for creating agent instances based on type and provider.
     """
     def __init__(self):
         """Initialize agent manager with configuration."""
-        from carchive.core.config import OPENAI_API_KEY, ANTHROPIC_API_KEY
+        from carchive.core.config import OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY
         self.openai_key = OPENAI_API_KEY or "sk-..."
         self.anthropic_key = ANTHROPIC_API_KEY or "sk-ant-..."
+        self.groq_key = GROQ_API_KEY or "gsk_..."
         self.ollama_url = OLLAMA_URL  # Defaults to "http://localhost:11434"
         
         # Provider configurations
@@ -63,6 +68,10 @@ class AgentManager:
                 "api_key": self.anthropic_key,
                 "chat_model": "claude-3-sonnet-20240229",
                 "vision_model": "claude-3-opus-20240229",
+            },
+            "groq": {
+                "api_key": self.groq_key,
+                "chat_model": "llama-3.2-3b-preview",
             }
         }
         
@@ -76,10 +85,12 @@ class AgentManager:
                 "openai": OpenAIChatAgent,
                 "ollama": OllamaChatAgent,
                 "anthropic": AnthropicChatAgent,
+                "groq": GroqChatAgent,
             },
             "content": {
                 "openai": OpenAIContentAgent,
                 "ollama": OllamaContentAgent,
+                "groq": GroqContentAgent,
             },
             "multimodal": {
                 "openai": OpenAIMultimodalAgent,
@@ -126,7 +137,7 @@ class AgentManager:
         Get a chat agent for the specified provider.
         
         Args:
-            provider: Provider name (e.g., "openai", "ollama", "anthropic")
+            provider: Provider name (e.g., "openai", "ollama", "anthropic", "groq")
                      If None, uses default from config (typically "ollama")
                      
         Returns:
@@ -155,6 +166,11 @@ class AgentManager:
                 api_key=config["api_key"],
                 model_name=config["chat_model"]
             )
+        elif provider == "groq":
+            return agent_class(
+                api_key=config["api_key"],
+                model_name=config["chat_model"]
+            )
         else:
             raise ValueError(f"Unsupported chat provider: {provider}")
     
@@ -163,7 +179,7 @@ class AgentManager:
         Get a content agent for the specified provider.
         
         Args:
-            provider: Provider name (e.g., "openai", "ollama")
+            provider: Provider name (e.g., "openai", "ollama", "groq")
                      If None, uses default from config (typically "ollama")
                      
         Returns:
@@ -186,6 +202,11 @@ class AgentManager:
             return agent_class(
                 model_name=config["chat_model"],
                 base_url=config["base_url"]
+            )
+        elif provider == "groq":
+            return agent_class(
+                api_key=config["api_key"],
+                model_name=config["chat_model"]
             )
         else:
             raise ValueError(f"Unsupported content provider: {provider}")
@@ -233,7 +254,7 @@ class AgentManager:
         
         Args:
             provider: Provider name with format "provider-type"
-                    (e.g., "openai", "ollama-vision", "ollama-text")
+                    (e.g., "openai", "ollama-vision", "ollama-text", "groq")
                      
         Returns:
             An appropriate agent instance
@@ -248,6 +269,8 @@ class AgentManager:
             return self.get_chat_agent("ollama")
         elif provider == "ollama":
             return self.get_embedding_agent("ollama")
+        elif provider == "groq":
+            return self.get_chat_agent("groq")
         else:
             raise ValueError(f"Unknown provider: {provider}")
             
