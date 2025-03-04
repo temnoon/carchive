@@ -121,9 +121,9 @@ class HTMLRenderer(ContentRenderer):
                 # Include raw markdown before rendered content if requested
                 if include_raw:
                     raw_content = f"<pre>{content}</pre><hr>"
-                    content = raw_content + self.markdown_renderer.render(content)
+                    content = raw_content + self.markdown_renderer.render(content, str(message.id))
                 else:
-                    content = self.markdown_renderer.render(content)
+                    content = self.markdown_renderer.render(content, str(message.id))
                 
                 rendered_items.append({
                     "role": role,

@@ -156,6 +156,16 @@ class Media(Base):
     provider_id = Column(UUID(as_uuid=True), ForeignKey("providers.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    # Additional fields in the database
+    original_file_name = Column(String, nullable=True)  # Original file name (without path)
+    original_file_id = Column(String, nullable=True)  # Original file ID from source system
+    mime_type = Column(String, nullable=False, default="application/octet-stream")  # MIME type
+    file_size = Column(Integer, nullable=True)  # Size in bytes
+    checksum = Column(String, nullable=True)  # File checksum for verification
+    is_generated = Column(Boolean, server_default='false', nullable=False)  # AI generated flag
+    source_url = Column(String, nullable=True)  # URL source if applicable
+    meta_info = Column(JSONB, nullable=True)  # Metadata stored as JSONB
+    
     # Relationships
     message_associations = relationship("MessageMedia", back_populates="media", overlaps="media_items")
     provider = relationship("Provider")

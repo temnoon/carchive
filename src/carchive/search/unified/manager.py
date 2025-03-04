@@ -98,7 +98,7 @@ class SearchManager:
                 EntityType.CONVERSATION, 
                 EntityType.CHUNK,
                 EntityType.GENCOM,
-                # EntityType.MEDIA  # Temporarily disable Media search
+                EntityType.MEDIA  # Media search now enabled
             }
         else:
             # Search only the requested entity types

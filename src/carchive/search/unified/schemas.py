@@ -28,8 +28,8 @@ class EntityType(str, Enum):
     CHUNK = "chunk"
     GENCOM = "gencom"             # Agent output of type 'gencom'
     EMBEDDING = "embedding"
-    # Temporarily disable Media as it seems to have model mismatches
-    # MEDIA = "media"
+    # Media entity is now supported
+    MEDIA = "media"
     ALL = "all"                   # Search across all supported entity types
 
 

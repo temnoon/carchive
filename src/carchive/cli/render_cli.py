@@ -53,7 +53,7 @@ from carchive.rendering.conversation_renderer import render_conversation_html
 # Import enhanced renderers
 from carchive.rendering.html_renderer import HTMLRenderer
 from carchive.database.session import get_session
-from carchive.database.models import Collection, Message, Chunk, Conversation, ResultsBuffer as Buffer, BufferItem
+from carchive.database.models import Collection, Message, Chunk, Conversation, ResultsBuffer as Buffer, BufferItem, Media, MessageMedia
 
 # Conditionally import PDF renderer
 if WEASYPRINT_AVAILABLE:
@@ -393,7 +393,7 @@ def message_cmd(
         # Create a rendered item
         rendered_item = {
             "role": message.meta_info.get("author_role", "unknown") if message.meta_info else "unknown",
-            "content": renderer.markdown_renderer.render(message.content),
+            "content": renderer.markdown_renderer.render(message.content, message_id),
             "metadata": message.meta_info or {},
             "header": f"Message ID: {message_id}"
         }
@@ -551,7 +551,7 @@ def buffer_cmd(
                 message = session.query(Message).filter_by(id=item.message_id).first()
                 if message:
                     role = message.meta_info.get("author_role", "unknown") if message.meta_info else "unknown"
-                    content = renderer.markdown_renderer.render(message.content)
+                    content = renderer.markdown_renderer.render(message.content, str(message.id))
                     metadata = message.meta_info or {}
                     header = f"Message ID: {message.id}"
                     
@@ -609,6 +609,299 @@ def buffer_cmd(
             output_path.write_bytes(pdf_data)
         
         typer.echo(f"Buffer '{buffer_name}' rendered to {output_path}")
+
+@render_app.command("media-messages")
+def media_messages_cmd(
+    limit: int = typer.Option(10, help="Number of media entries to process"),
+    media_type: str = typer.Option("image", help="Type of media to filter by (e.g., 'image', 'pdf')"),
+    output_file: str = typer.Argument(..., help="Path to save the output file"),
+    format: str = typer.Option("html", help=f"Output format: {', '.join(OUTPUT_FORMATS)}"),
+    template: str = typer.Option("default", help="Template to use for rendering"),
+    include_metadata: bool = typer.Option(True, help="Include metadata in the output")
+):
+    """
+    Render messages that have associated media files.
+    
+    This command finds messages that have media attachments and renders them with
+    their associated media files displayed inline. Useful for viewing uploaded images
+    or AI-generated content.
+    """
+    output_path = Path(output_file)
+    
+    # Validate format
+    format = format.lower()
+    if format not in OUTPUT_FORMATS:
+        typer.echo(f"Error: Unsupported format '{format}'. Supported formats: {', '.join(OUTPUT_FORMATS)}")
+        if format == "pdf" and not WEASYPRINT_AVAILABLE:
+            typer.echo("PDF format requires WeasyPrint. Please install WeasyPrint and its dependencies.")
+            raise typer.Exit(1)
+    
+    # Select renderer based on format
+    if format == "html":
+        renderer = HTMLRenderer()
+    elif format == "pdf":
+        if not WEASYPRINT_AVAILABLE:
+            typer.echo("Error: PDF generation requires WeasyPrint.")
+            raise typer.Exit(1)
+        renderer = PDFRenderer()
+    
+    with get_session() as session:
+        # Query media with the specified type, ordered by most recent first
+        media_query = session.query(Media).filter(Media.media_type == media_type).order_by(Media.created_at.desc()).limit(limit)
+        media_entries = media_query.all()
+        
+        if not media_entries:
+            typer.echo(f"No media entries found with type '{media_type}'.")
+            raise typer.Exit(1)
+        
+        typer.echo(f"Found {len(media_entries)} media entries of type '{media_type}'.")
+        
+        # Prepare data for rendering
+        rendered_items = []
+        
+        for media_entry in media_entries:
+            # Find messages associated with this media via MessageMedia table
+            media_associations = session.query(MessageMedia).filter(MessageMedia.media_id == media_entry.id).all()
+            
+            if not media_associations:
+                typer.echo(f"No message associations found for media {media_entry.id}, skipping.")
+                continue
+            
+            for assoc in media_associations:
+                message = session.query(Message).filter(Message.id == assoc.message_id).first()
+                if not message:
+                    typer.echo(f"Message {assoc.message_id} not found for media {media_entry.id}, skipping.")
+                    continue
+                
+                # Enhance content with media display
+                media_path = media_entry.file_path
+                # Convert to absolute URL path using file:// protocol if needed
+                media_url = f"file://{os.path.abspath(media_path)}"
+                
+                # Get message role
+                role = message.role
+                
+                # Create enhanced content with the media embedded
+                content = message.content
+                
+                # Find if the content already references the media and avoid duplicate display
+                if media_entry.original_file_id and media_entry.original_file_id in content:
+                    # The message already references this media, so replace the reference with actual image markdown
+                    # This assumes the content contains the file ID in a format that can be replaced
+                    if media_entry.media_type == "image":
+                        # Create markdown image tag
+                        img_markdown = f"![{media_entry.original_file_name or 'Image'}]({media_url})"
+                        # Replace the file reference with the actual image markdown
+                        enhanced_content = content.replace(media_entry.original_file_id, img_markdown)
+                    else:
+                        # For non-images, replace with a link
+                        link_markdown = f"[{media_entry.original_file_name or 'File'}]({media_url})"
+                        enhanced_content = content.replace(media_entry.original_file_id, link_markdown)
+                else:
+                    # The message doesn't explicitly reference this media (or it's in a different format)
+                    # Add media display at the top of the message
+                    if media_entry.media_type == "image":
+                        # Use markdown format for images
+                        media_markdown = f"![{media_entry.original_file_name or 'Image'}]({media_url})\n\n"
+                        enhanced_content = f"{media_markdown}{content}"
+                    else:
+                        # Use markdown format for other files
+                        media_markdown = f"[{media_entry.original_file_name or 'File'}]({media_url})\n\n"
+                        enhanced_content = f"{media_markdown}{content}"
+                
+                # Create metadata object including both message and media metadata
+                metadata = {}
+                if message.meta_info:
+                    metadata["message"] = message.meta_info
+                
+                metadata["media"] = {
+                    "id": str(media_entry.id),
+                    "file_path": media_entry.file_path,
+                    "media_type": media_entry.media_type,
+                    "original_file_name": media_entry.original_file_name,
+                    "mime_type": media_entry.mime_type,
+                    "file_size": media_entry.file_size,
+                    "created_at": str(media_entry.created_at)
+                }
+                
+                # Add to conversation info
+                header = f"Message ID: {message.id} | Media ID: {media_entry.id}"
+                if message.conversation_id:
+                    conversation = session.query(Conversation).filter(Conversation.id == message.conversation_id).first()
+                    if conversation:
+                        header += f" | Conversation: {conversation.title or '(Untitled)'}"
+                
+                # Render content with Markdown, passing the message ID for associated media
+                rendered_content = renderer.markdown_renderer.render(enhanced_content, str(message.id))
+                
+                # Add to rendered items
+                rendered_items.append({
+                    "role": role,
+                    "content": rendered_content,
+                    "metadata": metadata,
+                    "header": header
+                })
+        
+        if not rendered_items:
+            typer.echo("No messages with media found to render.")
+            raise typer.Exit(1)
+        
+        # Build context for template
+        context = {
+            "title": f"Messages with {media_type.capitalize()} Media",
+            "items": rendered_items,
+            "include_metadata": include_metadata,
+            "show_color_key": True
+        }
+        
+        # Get the template from the template engine
+        from carchive.rendering.template_engine import TemplateEngine
+        template_engine = TemplateEngine()
+        
+        # Render the template
+        html_content = template_engine.render(template, context)
+        
+        # Output based on format
+        if format == "html":
+            output_path.write_text(html_content, encoding="utf-8")
+        elif format == "pdf":
+            pdf_data = renderer._html_to_pdf(html_content)
+            output_path.write_bytes(pdf_data)
+        
+        typer.echo(f"Rendered {len(rendered_items)} messages with media to {output_path}")
+
+@render_app.command("media-conversation")
+def media_conversation_cmd(
+    conversation_id: str,
+    output_file: str = typer.Option("media_conversation.html", help="Path to save the output file"),
+    format: str = typer.Option("html", help=f"Output format: {', '.join(OUTPUT_FORMATS)}"),
+    template: str = typer.Option("default", help="Template to use for rendering"),
+    include_metadata: bool = typer.Option(False, help="Include metadata in output")
+):
+    """
+    Render a conversation with all media properly displayed.
+    
+    This command renders an entire conversation, showing all media attachments inline
+    with their associated messages. Helps visualize conversations with uploaded images
+    or AI-generated content.
+    """
+    output_path = Path(output_file)
+    
+    # Validate format
+    format = format.lower()
+    if format not in OUTPUT_FORMATS:
+        typer.echo(f"Error: Unsupported format '{format}'. Supported formats: {', '.join(OUTPUT_FORMATS)}")
+        if format == "pdf" and not WEASYPRINT_AVAILABLE:
+            typer.echo("PDF format requires WeasyPrint. Please install WeasyPrint and its dependencies.")
+            raise typer.Exit(1)
+    
+    # Select renderer based on format
+    if format == "html":
+        renderer = HTMLRenderer()
+    elif format == "pdf":
+        if not WEASYPRINT_AVAILABLE:
+            typer.echo("Error: PDF generation requires WeasyPrint.")
+            raise typer.Exit(1)
+        renderer = PDFRenderer()
+    
+    with get_session() as session:
+        # Verify conversation exists
+        conversation = session.query(Conversation).filter(Conversation.id == conversation_id).first()
+        if not conversation:
+            typer.echo(f"Error: Conversation '{conversation_id}' not found.")
+            raise typer.Exit(1)
+            
+        # Get all messages for this conversation in the correct order
+        messages = session.query(Message).filter(
+            Message.conversation_id == conversation_id
+        ).order_by(Message.created_at).all()
+        
+        if not messages:
+            typer.echo(f"Error: No messages found in conversation '{conversation_id}'.")
+            raise typer.Exit(1)
+            
+        # Prepare data for rendering
+        rendered_items = []
+        
+        for message in messages:
+            # Get the message's role and content
+            role = message.role
+            content = message.content
+            
+            # Find media associated with this message via MessageMedia table
+            media_associations = session.query(MessageMedia).filter(MessageMedia.message_id == message.id).all()
+            
+            # Enhanced content will have embedded media if there are associations
+            enhanced_content = content
+            
+            # Process each media item
+            media_info = []
+            for assoc in media_associations:
+                media_entry = session.query(Media).filter(Media.id == assoc.media_id).first()
+                if not media_entry:
+                    typer.echo(f"Media {assoc.media_id} not found for message {message.id}, skipping.")
+                    continue
+                
+                # Get media file URL
+                media_path = media_entry.file_path
+                media_url = f"file://{os.path.abspath(media_path)}"
+                
+                # Only add explicit media element if it's not already referenced in the content
+                if not (media_entry.original_file_id and media_entry.original_file_id in content):
+                    if media_entry.media_type == "image":
+                        media_html = f'<div class="media-display"><img src="{media_url}" alt="Media {media_entry.id}" style="max-width:100%;"></div>'
+                    else:
+                        media_html = f'<div class="media-display"><a href="{media_url}">View Media: {media_entry.original_file_name or media_entry.id}</a></div>'
+                    
+                    # Add media at the top of the message
+                    enhanced_content = f"{media_html}\n\n{enhanced_content}"
+                
+                # Add media info to metadata
+                media_info.append({
+                    "id": str(media_entry.id),
+                    "media_type": media_entry.media_type,
+                    "file_path": media_entry.file_path,
+                    "original_file_name": media_entry.original_file_name,
+                    "mime_type": media_entry.mime_type
+                })
+            
+            # Create metadata for the message
+            metadata = message.meta_info or {}
+            if media_info:
+                metadata["associated_media"] = media_info
+            
+            # Render content with Markdown, passing the message ID for associated media
+            rendered_content = renderer.markdown_renderer.render(enhanced_content, str(message.id))
+            
+            # Add to rendered items
+            rendered_items.append({
+                "role": role,
+                "content": rendered_content,
+                "metadata": metadata,
+                "header": f"Message ID: {message.id}" if include_metadata else None
+            })
+        
+        # Build context for template
+        context = {
+            "title": f"Conversation: {conversation.title or conversation_id}",
+            "items": rendered_items,
+            "include_metadata": include_metadata,
+            "show_color_key": True
+        }
+        
+        # Get the template engine and render
+        from carchive.rendering.template_engine import TemplateEngine
+        template_engine = TemplateEngine()
+        html_content = template_engine.render(template, context)
+        
+        # Output based on format
+        if format == "html":
+            output_path.write_text(html_content, encoding="utf-8")
+        elif format == "pdf":
+            pdf_data = renderer._html_to_pdf(html_content)
+            output_path.write_bytes(pdf_data)
+        
+        typer.echo(f"Conversation {conversation_id} with media rendered to {output_path}")
 
 @render_app.command("formats")
 def formats_cmd():

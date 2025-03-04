@@ -1,5 +1,6 @@
 # src/carchive/rendering/markdown_renderer.py
 import re
+import os
 import markdown
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
@@ -23,9 +24,14 @@ class MarkdownRenderer:
             'display': [['\\[', '\\]'], ['$$', '$$']]
         }
     
-    def render(self, text: str, extensions: List[str] = None) -> str:
+    def render(self, text: str, message_id: str = None, extensions: List[str] = None) -> str:
         """
         Render markdown with enhanced LaTeX and image handling.
+        
+        Args:
+            text: The markdown text to render
+            message_id: Optional message ID to look up associated media
+            extensions: Optional list of markdown extensions to use
         """
         if text is None or not isinstance(text, str):
             return ""
@@ -49,7 +55,7 @@ class MarkdownRenderer:
             # Simpler and faster path for non-math content
             # Only process embedded images if database is available
             try:
-                text = self.process_embedded_images(text)
+                text = self.process_embedded_images(text, message_id)
             except Exception as e:
                 # If there's a database or model error, just continue without processing images
                 print(f"Warning: Unable to process embedded images: {str(e)}")
@@ -72,7 +78,7 @@ class MarkdownRenderer:
             
             # Only process embedded images if database is available
             try:
-                text = self.process_embedded_images(text)
+                text = self.process_embedded_images(text, message_id)
             except Exception as e:
                 # If there's a database or model error, just continue without processing images
                 print(f"Warning: Unable to process embedded images: {str(e)}")
@@ -193,13 +199,19 @@ class MarkdownRenderer:
             
         return text
     
-    def process_embedded_images(self, text: str) -> str:
+    def process_embedded_images(self, text: str, message_id: str = None) -> str:
         """
         Process embedded images in markdown text.
         
         1. Handle local file references
         2. Handle data URLs
         3. Handle media references from the database
+        4. Handle file-id references for uploaded and generated media
+        5. Include associated media from the MessageMedia table
+        
+        Args:
+            text: The markdown text to process
+            message_id: Optional message ID to look up associated media
         """
         if not text:
             return text
@@ -223,12 +235,73 @@ class MarkdownRenderer:
                     # Check the columns available in the media table
                     media = session.query(Media).filter_by(id=media_id).first()
                     if media and hasattr(media, 'file_path') and media.file_path:
-                        return f'![{alt_text}](/media/{media_id}/{Path(media.file_path).name})'
+                        return f'![{alt_text}](file://{os.path.abspath(media.file_path)})'
                     return f'![{alt_text}](missing-media-{media_id})'
             except Exception as e:
                 # If there's a database error, just return the original reference with a note
                 return f'![{alt_text}](media-reference-error-{media_id})'
         
         text = re.sub(media_pattern, media_replacement, text)
+        
+        # Process file-id references in the text (e.g., file-abc123)
+        # These are references to uploaded files that need to be converted to proper image markdown
+        file_pattern = r'(file-[a-zA-Z0-9]+)'
+        
+        def file_id_replacement(match):
+            file_id = match.group(1)
+            
+            try:
+                with get_session() as session:
+                    # Look up the media by original_file_id
+                    media = session.query(Media).filter_by(original_file_id=file_id).first()
+                    if media and hasattr(media, 'file_path') and media.file_path:
+                        # Only convert to markdown if it's an image
+                        if media.media_type == 'image':
+                            file_name = media.original_file_name or Path(media.file_path).name
+                            return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
+                        else:
+                            # For non-images, use a link
+                            file_name = media.original_file_name or Path(media.file_path).name
+                            return f'[{file_name}](file://{os.path.abspath(media.file_path)})'
+                    return file_id  # Keep as is if not found
+            except Exception as e:
+                # If there's an error, just return the original text
+                return file_id
+                
+        text = re.sub(file_pattern, file_id_replacement, text)
+        
+        # If a message_id is provided, also include any associated media that isn't already referenced
+        if message_id:
+            try:
+                with get_session() as session:
+                    from carchive.database.models import MessageMedia
+                    
+                    # Find all media associated with this message
+                    media_associations = session.query(MessageMedia, Media).join(
+                        Media, MessageMedia.media_id == Media.id
+                    ).filter(
+                        MessageMedia.message_id == message_id
+                    ).all()
+                    
+                    # For each associated media, check if it's already referenced in the text
+                    for assoc, media in media_associations:
+                        # Skip if the media's original_file_id is already in the text
+                        if media.original_file_id and media.original_file_id in text:
+                            continue
+                            
+                        # Skip if the media's ID is already in the text (as a media: reference)
+                        if f'media:{media.id}' in text:
+                            continue
+                            
+                        # If not already referenced, append the media reference at the end
+                        if media.media_type == 'image':
+                            file_name = media.original_file_name or Path(media.file_path).name
+                            text = text + f'\n\n![{file_name}](file://{os.path.abspath(media.file_path)})'
+                        else:
+                            file_name = media.original_file_name or Path(media.file_path).name
+                            text = text + f'\n\n[{file_name}](file://{os.path.abspath(media.file_path)})'
+            except Exception as e:
+                # If there's an error, just continue without adding associated media
+                print(f"Error processing associated media for message {message_id}: {str(e)}")
         
         return text
