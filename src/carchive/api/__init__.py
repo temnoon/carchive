@@ -39,6 +39,7 @@ def create_app(test_config=None):
                 '/api/messages',
                 '/api/media',
                 '/api/search',
+                '/api/collections',
                 '/api/cli'
             ]
         })
@@ -49,11 +50,13 @@ def create_app(test_config=None):
     from carchive.api.routes.media import bp as media_bp
     from carchive.api.routes.search import bp as search_bp
     from carchive.api.routes.cli import bp as cli_bp
+    from carchive.api.routes.collections import bp as collections_bp
     
     app.register_blueprint(conversations_bp)
     app.register_blueprint(messages_bp)
     app.register_blueprint(media_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(cli_bp)
+    app.register_blueprint(collections_bp)
     
     return app

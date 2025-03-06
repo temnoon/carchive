@@ -1,0 +1,38 @@
+{% extends 'layout.html' %}
+
+{% block title %}Create Collection - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1>Create New Collection</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form action="{{ url_for('collections.create_collection') }}" method="post">
+            <div class="mb-3">
+                <label for="name" class="form-label">Collection Name</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description (Optional)</label>
+                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="addFromSearch" name="add_from_search">
+                <label class="form-check-label" for="addFromSearch">Create from recent search results</label>
+                <div class="form-text">If checked, your most recent search results will be added to this collection.</div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('collections.list_collections') }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Create Collection</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

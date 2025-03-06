@@ -69,9 +69,58 @@ class CollectionManager:
             return coll
 
     @staticmethod
-    def add_items(coll_id: str, items: List[CollectionItem]) -> None:
-        # Alternatively, accept a Pydantic schema for items
-        pass
+    def add_items(coll_id: str, items: List['CollectionItemSchema']) -> bool:
+        """Add items to an existing collection."""
+        with get_session() as session:
+            collection = session.query(Collection).filter_by(id=coll_id).first()
+            if not collection:
+                raise ValueError(f"Collection {coll_id} not found.")
+                
+            # Create and add new collection items
+            for item in items:
+                citem = CollectionItem(
+                    collection_id=collection.id,
+                    message_id=item.message_id,
+                    chunk_id=item.chunk_id,
+                    conversation_id=item.conversation_id,
+                    meta_info=item.meta_info or {}
+                )
+                session.add(citem)
+                
+            session.commit()
+            return True
+            
+    @staticmethod
+    def remove_item(coll_id: str, item_id: str) -> bool:
+        """Remove an item from a collection by item ID."""
+        with get_session() as session:
+            collection = session.query(Collection).filter_by(id=coll_id).first()
+            if not collection:
+                raise ValueError(f"Collection {coll_id} not found.")
+                
+            item = session.query(CollectionItem).filter_by(id=item_id, collection_id=coll_id).first()
+            if not item:
+                raise ValueError(f"Item {item_id} not found in collection {coll_id}.")
+                
+            session.delete(item)
+            session.commit()
+            return True
+            
+    @staticmethod
+    def delete_collection(coll_id: str) -> bool:
+        """Delete a collection and all its items."""
+        with get_session() as session:
+            collection = session.query(Collection).filter_by(id=coll_id).first()
+            if not collection:
+                raise ValueError(f"Collection {coll_id} not found.")
+                
+            # Delete all items first (should cascade, but being explicit)
+            session.query(CollectionItem).filter_by(collection_id=coll_id).delete()
+                
+            # Delete the collection
+            session.delete(collection)
+            session.commit()
+            return True
 
     @staticmethod
     def get_collection(coll_id: str) -> Optional[Collection]:

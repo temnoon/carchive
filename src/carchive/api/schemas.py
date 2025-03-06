@@ -67,6 +67,49 @@ class MediaDetail(MediaBase):
     linked_message: Optional[MessageBase] = None
 
 
+class CollectionItemBase(BaseModel):
+    """Base schema for collection items."""
+    message_id: Optional[UUID] = None
+    chunk_id: Optional[UUID] = None
+    conversation_id: Optional[UUID] = None
+    meta_info: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        """Pydantic configuration."""
+        orm_mode = True
+
+
+class CollectionBase(BaseModel):
+    """Base schema for collections."""
+    id: UUID
+    name: str
+    created_at: datetime
+    meta_info: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        """Pydantic configuration."""
+        orm_mode = True
+
+
+class CollectionCreate(BaseModel):
+    """Schema for creating a new collection."""
+    name: str
+    meta_info: Optional[Dict[str, Any]] = None
+    items: Optional[List[CollectionItemBase]] = None
+
+
+class CollectionUpdate(BaseModel):
+    """Schema for updating an existing collection."""
+    name: Optional[str] = None
+    meta_info: Optional[Dict[str, Any]] = None
+
+
+class CollectionDetail(CollectionBase):
+    """Detailed collection schema with items."""
+    items: List[Dict[str, Any]] = []
+    item_count: int = 0
+
+
 class SearchResult(BaseModel):
     """Schema for search results."""
     conversations: List[ConversationBase] = []

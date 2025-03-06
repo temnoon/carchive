@@ -47,6 +47,7 @@ def create_app(test_config=None):
     from carchive.gui.views.media import bp as media_bp
     from carchive.gui.views.search import bp as search_bp
     from carchive.gui.views.cli import bp as cli_bp
+    from carchive.gui.views.collections import bp as collections_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(conversations_bp)
@@ -54,6 +55,7 @@ def create_app(test_config=None):
     app.register_blueprint(media_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(cli_bp)
+    app.register_blueprint(collections_bp)
     
     @app.errorhandler(404)
     def page_not_found(e):

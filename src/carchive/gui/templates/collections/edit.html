@@ -1,0 +1,40 @@
+{% extends 'layout.html' %}
+
+{% block title %}Edit Collection - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1>Edit Collection</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form action="{{ url_for('collections.edit_collection', collection_id=collection.id) }}" method="post">
+            <div class="mb-3">
+                <label for="name" class="form-label">Collection Name</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ collection.name }}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description (Optional)</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ collection.meta_info.description if collection.meta_info and collection.meta_info.description else '' }}</textarea>
+            </div>
+            
+            {% if collection.meta_info and collection.meta_info|length > 0 %}
+            <div class="mb-3">
+                <label class="form-label">Other Metadata</label>
+                <pre><code>{{ collection.meta_info | tojson(indent=2) }}</code></pre>
+                <div class="form-text">This metadata is managed by the system and can only be edited via the API.</div>
+            </div>
+            {% endif %}
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('collections.view_collection', collection_id=collection.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

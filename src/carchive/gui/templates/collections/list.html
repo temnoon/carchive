@@ -1,0 +1,110 @@
+{% extends 'layout.html' %}
+
+{% block title %}Collections - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1 class="mb-4">Collections</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('collections.create_collection') }}" class="btn btn-primary mb-4">
+            <i class="fa fa-plus"></i> New Collection
+        </a>
+    </div>
+</div>
+
+{% if collections %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <div class="row">
+                        <div class="col-4">Name</div>
+                        <div class="col-3">Created</div>
+                        <div class="col-2">Items</div>
+                        <div class="col-3">Actions</div>
+                    </div>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for collection in collections %}
+                    <div class="list-group-item">
+                        <div class="row align-items-center">
+                            <div class="col-4">
+                                <a href="{{ url_for('collections.view_collection', collection_id=collection.id) }}">
+                                    {{ collection.name }}
+                                </a>
+                            </div>
+                            <div class="col-3">{{ collection.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            <div class="col-2">{{ collection.item_count }}</div>
+                            <div class="col-3">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('collections.view_collection', collection_id=collection.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fa fa-eye"></i> View
+                                    </a>
+                                    <a href="{{ url_for('collections.edit_collection', collection_id=collection.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fa fa-edit"></i> Edit
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ collection.id }}">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal{{ collection.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete the collection "{{ collection.name }}"?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('collections.delete_collection', collection_id=collection.id) }}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Collection pagination">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if pagination.page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('collections.list_collections', page=pagination.page-1) }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% for p in range(max(1, pagination.page - 2), min(pagination.pages + 1, pagination.page + 3)) %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('collections.list_collections', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            <li class="page-item {% if pagination.page == pagination.pages %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('collections.list_collections', page=pagination.page+1) }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        No collections found. <a href="{{ url_for('collections.create_collection') }}">Create one now</a>!
+    </div>
+{% endif %}
+{% endblock %}
