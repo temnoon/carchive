@@ -26,6 +26,7 @@ from carchive.cli.chunk_cli import chunk_app  # Import the Chunk CLI
 from carchive.cli.render_cli import render_app  # Import the Render CLI
 from carchive.cli.archive_cli import app as archive_app  # Import the Archive CLI
 from carchive.cli.db_cli import app as db_app  # Import the Database Management CLI
+from carchive.cli.env_cli import app as env_app  # Import the Environment Management CLI
 
 
 logging.basicConfig(
@@ -54,6 +55,7 @@ main_app.add_typer(chunk_app, name="chunk")  # Add the Chunk CLI
 main_app.add_typer(render_app, name="render")  # Add the Render CLI
 main_app.add_typer(archive_app, name="archive")  # Add the Archive CLI
 main_app.add_typer(db_app, name="db")  # Add the Database Management CLI
+main_app.add_typer(env_app, name="env")  # Add the Environment Management CLI
 
 
 def main():
