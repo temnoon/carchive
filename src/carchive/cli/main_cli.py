@@ -24,6 +24,7 @@ from carchive.cli.unified_search_cli import search_app as unified_search_app  # 
 from carchive.cli.buffer_cli import buffer_app  # Import the Buffer CLI
 from carchive.cli.chunk_cli import chunk_app  # Import the Chunk CLI
 from carchive.cli.render_cli import render_app  # Import the Render CLI
+from carchive.cli.archive_cli import app as archive_app  # Import the Archive CLI
 
 
 logging.basicConfig(
@@ -50,6 +51,7 @@ main_app.add_typer(cluster_app, name="cluster")  # Add the Clustering CLI
 main_app.add_typer(buffer_app, name="buffer")  # Add the Buffer CLI
 main_app.add_typer(chunk_app, name="chunk")  # Add the Chunk CLI
 main_app.add_typer(render_app, name="render")  # Add the Render CLI
+main_app.add_typer(archive_app, name="archive")  # Add the Archive CLI
 
 
 def main():

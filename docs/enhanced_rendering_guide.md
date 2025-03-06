@@ -1,6 +1,6 @@
 # Enhanced Rendering System Guide
 
-This guide covers the newly implemented enhanced rendering system for Carchive, which provides robust handling of Markdown content, LaTeX equations, embedded images, and support for multiple output formats including HTML and PDF.
+This guide covers the enhanced rendering system for Carchive, which provides robust handling of Markdown content, LaTeX equations, embedded images, DALL-E AI-generated images, gencom fields, and support for multiple output formats including HTML and PDF.
 
 ## Overview
 
@@ -15,10 +15,22 @@ The enhanced rendering system includes:
    - LaTeX repair for common corruption patterns
    - Image reference handling
    - Media database integration
+   - DALL-E AI-generated image support
+   - Parent-child message relationship tracking
 
 3. **Multiple Output Formats**
    - HTML output with customizable templates
    - PDF generation via WeasyPrint
+   
+4. **Gencom Fields Support**
+   - Display agent thought process and analysis
+   - Configurable field selection
+   - Custom field label mapping
+   
+5. **Media Display Options**
+   - Inline image display
+   - Gallery layout for multiple images
+   - Thumbnail view with captions
 
 ## Installation Requirements
 
@@ -42,14 +54,32 @@ These are already included in the project's dependencies.
 ### Rendering Conversations
 
 ```bash
-# Render a conversation to HTML
+# Basic rendering to HTML
 poetry run carchive render conversation <conversation-id> --output-file output.html
 
-# Render a conversation to PDF
+# Render to PDF
 poetry run carchive render conversation <conversation-id> --output-file output.pdf --format pdf
 
 # Include raw markdown in the output (for debugging)
 poetry run carchive render conversation <conversation-id> --include-raw
+
+# DALL-E and media rendering options
+poetry run carchive render conversation <conversation-id> --media-display=gallery
+
+# Gencom fields rendering
+poetry run carchive render conversation <conversation-id> --gencom-fields=all
+poetry run carchive render conversation <conversation-id> --gencom-fields=thinking_process,relevant_info
+
+# Custom labels for gencom fields
+poetry run carchive render conversation <conversation-id> --gencom-fields=thinking_process,relevant_info \
+  --gencom-field-labels="thinking_process:Reasoning,relevant_info:Context"
+
+# Complete example with all options
+poetry run carchive render conversation <conversation-id> output.html \
+  --media-display=gallery \
+  --gencom-fields=thinking_process,relevant_info \
+  --gencom-field-labels="thinking_process:Reasoning,relevant_info:Context" \
+  --template=academic
 ```
 
 ### Rendering Individual Messages
@@ -275,6 +305,34 @@ The system handles different types of image references:
 1. **Local File References**: `![Alt text](file:path/to/image.jpg)`
 2. **Media Database References**: `![Alt text](media:uuid-here)`
 3. **Regular URLs**: `![Alt text](https://example.com/image.jpg)`
+4. **File ID References**: `file-abc123` (used in ChatGPT exports)
+5. **DALL-E Generated Images**: AI-generated images from DALL-E with "AI Generated" badge
+
+### Media Display Modes
+
+You can choose how media is displayed using the `--media-display` option:
+
+- `inline`: Shows images in full size directly in the conversation flow (default)
+- `gallery`: Displays images in a grid layout when multiple images are present
+- `thumbnails`: Shows smaller thumbnail versions that can be clicked to view full size
+
+### DALL-E Image Detection
+
+The system automatically detects DALL-E generated images through:
+
+1. The `is_generated` flag in the Media table
+2. Parent-child message relationships (tool messages with DALL-E prompts)
+3. Message content analysis for DALL-E references
+4. File naming patterns in the original archive
+
+### Parent-Child Rendering
+
+For complex message relationships, the renderer now:
+
+1. Follows parent-child links between messages
+2. Associates tool messages containing DALL-E prompts with assistant messages
+3. Displays generated images with proper attribution
+4. Shows images in the correct message context
 
 ## Troubleshooting
 
@@ -315,3 +373,40 @@ For LaTeX that doesn't render properly:
 1. Check the HTML source for correct MathJax delimiters
 2. Ensure MathJax is loading properly (check console for errors)
 3. Try using different delimiter styles in your markdown source
+
+## Gencom Fields Integration
+
+Gencom fields allow displaying the agent's thought process alongside normal message content.
+
+### Displaying Gencom Fields
+
+Control which gencom fields are displayed using the `--gencom-fields` option:
+
+- `none`: Don't display any gencom fields (default)
+- `all`: Display all available gencom fields
+- Field list: Specify comma-separated field names (e.g., `thinking_process,relevant_info`)
+
+### Custom Field Labels
+
+You can customize how field names are displayed with the `--gencom-field-labels` option, using a comma-separated list of `field:Label` pairs:
+
+```bash
+--gencom-field-labels="thinking_process:Reasoning,relevant_info:Context"
+```
+
+### Adding Your Own Gencom Fields
+
+To add gencom fields to messages, update the message's `meta_info` JSON to include a `gencom` object:
+
+```json
+{
+  "meta_info": {
+    "gencom": {
+      "thinking_process": "Here's my step-by-step reasoning...",
+      "relevant_info": "The key information I considered was..."
+    }
+  }
+}
+```
+
+These fields will then be displayed when using the appropriate render options.

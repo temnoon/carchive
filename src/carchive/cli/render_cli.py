@@ -72,10 +72,21 @@ def conversation_cmd(
     output_file: str = "conversation.html",
     format: str = typer.Option("html", help=f"Output format: {', '.join(OUTPUT_FORMATS)}"),
     template: str = typer.Option("default", help="Template to use for rendering"),
-    include_raw: bool = typer.Option(False, help="Include raw markdown in output")
+    include_raw: bool = typer.Option(False, help="Include raw markdown in output"),
+    media_display: str = typer.Option("inline", help="Media display mode: inline, gallery, or thumbnails"),
+    gencom_fields: str = typer.Option("none", help="Gencom fields to display: none, all, or comma-separated list"),
+    gencom_field_labels: str = typer.Option("", help="Field name mapping (e.g. 'thinking_process:Reasoning,relevant_info:Context')")
 ):
     """
     Render a conversation to a file in the specified format.
+    
+    This command renders a full conversation, including messages and optionally media and gencom fields.
+    
+    Examples:
+        carchive render conversation 12345 output.html
+        carchive render conversation 12345 output.html --gencom-fields=all
+        carchive render conversation 12345 output.html --gencom-fields=thinking_process,relevant_info
+        carchive render conversation 12345 output.html --media-display=gallery
     """
     output_path = Path(output_file)
     
@@ -87,6 +98,23 @@ def conversation_cmd(
             typer.echo("PDF format requires WeasyPrint. Please install WeasyPrint and its dependencies:")
             typer.echo("https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation")
         raise typer.Exit(1)
+    
+    # Validate media display mode
+    valid_display_modes = ["inline", "gallery", "thumbnails"]
+    if media_display not in valid_display_modes:
+        typer.echo(f"Error: Invalid media display mode '{media_display}'. Valid modes: {', '.join(valid_display_modes)}")
+        raise typer.Exit(1)
+        
+    # Process gencom field labels if provided
+    field_labels_dict = {}
+    if gencom_field_labels:
+        try:
+            for mapping in gencom_field_labels.split(','):
+                field, label = mapping.split(':', 1)
+                field_labels_dict[field.strip()] = label.strip()
+        except ValueError:
+            typer.echo("Error: Invalid format for gencom field labels. Use 'field:Label,another:Another Label'")
+            raise typer.Exit(1)
     
     # Select renderer based on format
     if format == "html":
@@ -103,7 +131,10 @@ def conversation_cmd(
             conversation_id=conversation_id,
             output_path=str(output_path),
             template=template,
-            include_raw=include_raw
+            include_raw=include_raw,
+            gencom_fields=gencom_fields,
+            gencom_field_labels=field_labels_dict,
+            media_display_mode=media_display
         )
         typer.echo(f"Conversation {conversation_id} rendered to {output_path}")
     except Exception as e:

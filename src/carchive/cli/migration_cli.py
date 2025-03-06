@@ -38,6 +38,9 @@ def migrate_chatgpt(
     target_media_dir: Optional[Path] = typer.Option(
         None, help="Directory to copy media files to (defaults to ../media/chatgpt)"
     ),
+    dalle_dir: Optional[Path] = typer.Option(
+        None, help="Directory containing DALL-E generated images (often 'dalle-generations' subfolder)"
+    ),
     log_level: str = typer.Option(
         "INFO", help="Logging level"
     )
@@ -76,13 +79,16 @@ def migrate_chatgpt(
     # Run migration
     typer.echo(f"Starting migration from {archive_path} to {db_name}")
     typer.echo(f"Media will be copied from {media_dir} to {target_media_dir}")
+    if dalle_dir:
+        typer.echo(f"DALL-E images will be processed from {dalle_dir}")
     
     try:
         service = MigrationService(db_connection)
         stats = service.migrate_chatgpt_archive(
             archive_path=str(archive_path),
             media_dir=str(media_dir),
-            target_media_dir=str(target_media_dir)
+            target_media_dir=str(target_media_dir),
+            dalle_dir=str(dalle_dir) if dalle_dir else None
         )
         
         # Print statistics

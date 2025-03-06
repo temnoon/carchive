@@ -243,26 +243,56 @@ class MarkdownRenderer:
         
         text = re.sub(media_pattern, media_replacement, text)
         
-        # Process file-id references in the text (e.g., file-abc123)
+        # Process DALL-E asset references in the format [Asset: file-abc123]
+        asset_pattern = r'\[Asset: (file-[a-zA-Z0-9]+)\]'
+        
+        def asset_replacement(match):
+            file_id = match.group(1)
+            
+            try:
+                with get_session() as session:
+                    # Use ONLY exact match for original_file_id to avoid incorrect matching
+                    media = session.query(Media).filter_by(original_file_id=file_id).first()
+                    
+                    if media and hasattr(media, 'file_path') and media.file_path:
+                        if os.path.exists(media.file_path):
+                            file_name = media.original_file_name or Path(media.file_path).name
+                            return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
+                        else:
+                            return f'[Asset: {file_id} (file not found)]'
+                    return f'[Asset: {file_id} (no media match)]'  # Keep original format with note
+            except Exception as e:
+                # If there's an error, just return the original text
+                return f'[Asset: {file_id}]'
+        
+        text = re.sub(asset_pattern, asset_replacement, text)
+        
+        # Process standalone file-id references in the text (e.g., file-abc123)
         # These are references to uploaded files that need to be converted to proper image markdown
-        file_pattern = r'(file-[a-zA-Z0-9]+)'
+        # Use word boundaries to ensure we only match standalone file IDs, not ones within other text
+        file_pattern = r'\b(file-[a-zA-Z0-9]+)\b'
         
         def file_id_replacement(match):
             file_id = match.group(1)
             
             try:
                 with get_session() as session:
-                    # Look up the media by original_file_id
+                    # Use ONLY exact match for original_file_id
                     media = session.query(Media).filter_by(original_file_id=file_id).first()
+                    
                     if media and hasattr(media, 'file_path') and media.file_path:
-                        # Only convert to markdown if it's an image
-                        if media.media_type == 'image':
-                            file_name = media.original_file_name or Path(media.file_path).name
-                            return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
+                        if os.path.exists(media.file_path):
+                            # Only convert to markdown if it's an image
+                            if media.media_type == 'image':
+                                file_name = media.original_file_name or Path(media.file_path).name
+                                return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
+                            else:
+                                # For non-images, use a link
+                                file_name = media.original_file_name or Path(media.file_path).name
+                                return f'[{file_name}](file://{os.path.abspath(media.file_path)})'
                         else:
-                            # For non-images, use a link
-                            file_name = media.original_file_name or Path(media.file_path).name
-                            return f'[{file_name}](file://{os.path.abspath(media.file_path)})'
+                            # File doesn't exist on disk
+                            return file_id
                     return file_id  # Keep as is if not found
             except Exception as e:
                 # If there's an error, just return the original text
@@ -286,20 +316,30 @@ class MarkdownRenderer:
                     # For each associated media, check if it's already referenced in the text
                     for assoc, media in media_associations:
                         # Skip if the media's original_file_id is already in the text
-                        if media.original_file_id and media.original_file_id in text:
-                            continue
+                        if media.original_file_id:
+                            # Check if it appears in an [Asset: file-ID] pattern
+                            if f'[Asset: {media.original_file_id}]' in text:
+                                continue
+                            # Check for standalone file-ID
+                            if media.original_file_id in text:
+                                continue
                             
                         # Skip if the media's ID is already in the text (as a media: reference)
                         if f'media:{media.id}' in text:
                             continue
                             
+                        # Skip if the file path is already referenced
+                        if media.file_path and os.path.abspath(media.file_path) in text:
+                            continue
+                            
                         # If not already referenced, append the media reference at the end
-                        if media.media_type == 'image':
-                            file_name = media.original_file_name or Path(media.file_path).name
-                            text = text + f'\n\n![{file_name}](file://{os.path.abspath(media.file_path)})'
-                        else:
-                            file_name = media.original_file_name or Path(media.file_path).name
-                            text = text + f'\n\n[{file_name}](file://{os.path.abspath(media.file_path)})'
+                        if media.file_path and os.path.exists(media.file_path):
+                            if media.media_type == 'image':
+                                file_name = media.original_file_name or Path(media.file_path).name
+                                text = text + f'\n\n![{file_name}](file://{os.path.abspath(media.file_path)})'
+                            else:
+                                file_name = media.original_file_name or Path(media.file_path).name
+                                text = text + f'\n\n[{file_name}](file://{os.path.abspath(media.file_path)})'
             except Exception as e:
                 # If there's an error, just continue without adding associated media
                 print(f"Error processing associated media for message {message_id}: {str(e)}")

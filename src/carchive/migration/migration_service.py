@@ -46,7 +46,8 @@ class MigrationService:
             self.conn.close()
         logger.info("Database connection closed")
 
-    def migrate_chatgpt_archive(self, archive_path: str, media_dir: str = None, target_media_dir: str = None) -> Dict[str, int]:
+    def migrate_chatgpt_archive(self, archive_path: str, media_dir: str = None, 
+                              target_media_dir: str = None, dalle_dir: str = None) -> Dict[str, int]:
         """
         Migrate a ChatGPT archive to the carchive database.
         
@@ -54,6 +55,7 @@ class MigrationService:
             archive_path: Path to conversations.json
             media_dir: Directory containing media files
             target_media_dir: Directory to copy media files to
+            dalle_dir: Directory containing DALL-E generated images
             
         Returns:
             Statistics dict with counts of imported items
@@ -61,7 +63,8 @@ class MigrationService:
         adapter = ChatGPTAdapter(
             conversation_file=archive_path,
             media_dir=media_dir,
-            target_media_dir=target_media_dir
+            target_media_dir=target_media_dir,
+            dalle_dir=dalle_dir
         )
         
         # Load conversations

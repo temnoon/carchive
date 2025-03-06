@@ -96,16 +96,27 @@ class HTMLRenderer(ContentRenderer):
             return html_content
     
     def render_conversation(self, conversation_id: str, output_path: str, 
-                           template: str = "default", include_raw: bool = False) -> str:
+                           template: str = "default", include_raw: bool = False,
+                           gencom_fields: str = "none", gencom_field_labels: dict = None,
+                           media_display_mode: str = "inline") -> str:
         """
         Render a conversation to HTML.
+        
+        Args:
+            conversation_id: The ID of the conversation to render
+            output_path: Path to save the output
+            template: Template name to use for rendering
+            include_raw: Whether to include raw markdown in the output
+            gencom_fields: Which gencom fields to include - "none", "all", or comma-separated list
+            gencom_field_labels: Dict mapping gencom field names to display labels
+            media_display_mode: How to display media - "inline", "gallery", or "thumbnails"
         """
         with get_session() as session:
             conversation = session.query(Conversation).filter_by(id=conversation_id).first()
             if not conversation:
                 raise ValueError(f"Conversation '{conversation_id}' not found.")
             
-            messages = session.query(Message).filter_by(conversation_id=conversation_id).all()
+            messages = session.query(Message).filter_by(conversation_id=conversation_id).order_by(Message.created_at).all()
             if not messages:
                 raise ValueError(f"No messages found in conversation '{conversation_id}'.")
             
@@ -118,6 +129,17 @@ class HTMLRenderer(ContentRenderer):
                 role = self._determine_role(message.meta_info)
                 content = message.content
                 
+                # Process gencom fields if present in metadata
+                gencom_html = ""
+                if gencom_fields != "none" and message.meta_info and "gencom" in message.meta_info:
+                    gencom_data = message.meta_info.get("gencom", {})
+                    if gencom_data:
+                        gencom_html = self._render_gencom_fields(
+                            gencom_data, 
+                            gencom_fields, 
+                            gencom_field_labels or {}
+                        )
+                
                 # Include raw markdown before rendered content if requested
                 if include_raw:
                     raw_content = f"<pre>{content}</pre><hr>"
@@ -125,10 +147,16 @@ class HTMLRenderer(ContentRenderer):
                 else:
                     content = self.markdown_renderer.render(content, str(message.id))
                 
+                # Add gencom HTML at the end of the content if present
+                if gencom_html:
+                    content = f"{content}\n{gencom_html}"
+                
+                # Create rendered item
                 rendered_items.append({
                     "role": role,
                     "content": content,
-                    "metadata": message.meta_info
+                    "metadata": message.meta_info,
+                    "message_id": str(message.id)
                 })
             
             if not rendered_items:
@@ -140,7 +168,8 @@ class HTMLRenderer(ContentRenderer):
                 "subtitle": f"Created: {conversation.created_at}",
                 "items": rendered_items,
                 "include_metadata": include_raw,
-                "show_color_key": True
+                "show_color_key": True,
+                "media_display_mode": media_display_mode
             }
             
             html_content = self.template_engine.render(template, context)
@@ -150,6 +179,55 @@ class HTMLRenderer(ContentRenderer):
                 Path(output_path).write_text(html_content, encoding="utf-8")
                 
             return html_content
+            
+    def _render_gencom_fields(self, gencom_data: dict, gencom_fields: str, field_labels: dict = None) -> str:
+        """
+        Render gencom fields as HTML.
+        
+        Args:
+            gencom_data: Dictionary of gencom fields and values
+            gencom_fields: Which fields to include - "none", "all", or comma-separated list
+            field_labels: Optional dict mapping field names to display labels
+        
+        Returns:
+            HTML string of rendered gencom fields
+        """
+        if not gencom_data or gencom_fields == "none":
+            return ""
+            
+        # Determine which fields to display
+        fields_to_show = []
+        if gencom_fields == "all":
+            fields_to_show = list(gencom_data.keys())
+        else:
+            # Parse comma-separated list
+            requested_fields = [f.strip() for f in gencom_fields.split(",")]
+            fields_to_show = [f for f in requested_fields if f in gencom_data]
+            
+        if not fields_to_show:
+            return ""
+            
+        # Build HTML
+        field_labels = field_labels or {}
+        html = ['<div class="gencom-fields">']
+        html.append('<h3>Agent Thought Process</h3>')
+        
+        for field in fields_to_show:
+            # Get display label (use field name if no label provided)
+            label = field_labels.get(field, field.replace('_', ' ').title())
+            value = gencom_data.get(field, "")
+            
+            # Render the value as markdown
+            rendered_value = self.markdown_renderer.render(value)
+            
+            # Add to HTML
+            html.append(f'<div class="gencom-field">')
+            html.append(f'<div class="gencom-field-label">{label}</div>')
+            html.append(f'<div class="gencom-field-value">{rendered_value}</div>')
+            html.append('</div>')
+            
+        html.append('</div>')
+        return "\n".join(html)
             
     def render_search_results(self, results: List[Dict[str, Any]], output_path: str, 
                             template: str = "default") -> str:
