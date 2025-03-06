@@ -32,6 +32,7 @@ matplotlib = "^3.10.1"
 pylatexenc = "^2.10"
 weasyprint = "^64.1"
 groq = "^0.4.1"     # Groq API client
+psutil = "^5.9.5"   # Process and system utilities for server management
 
 [tool.poetry.scripts]
 carchive = "carchive.cli.main_cli:main"
