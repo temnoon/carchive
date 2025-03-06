@@ -253,3 +253,18 @@ class CollectionItem(Base):
     conversation = relationship("Conversation", foreign_keys=[conversation_id])
     message = relationship("Message", foreign_keys=[message_id])
     chunk = relationship("Chunk", foreign_keys=[chunk_id])
+
+class SavedSearch(Base):
+    """Represents a saved search query and criteria."""
+    __tablename__ = "saved_searches"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    query = Column(String, nullable=False)
+    search_type = Column(String, nullable=False, default="all")
+    criteria = Column(JSONB, nullable=True)  # Store search criteria as JSON
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Optionally link to a user if user management is implemented
+    user_id = Column(UUID(as_uuid=True), nullable=True)

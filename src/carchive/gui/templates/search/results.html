@@ -15,6 +15,13 @@
     </div>
   </div>
   
+  {% if error %}
+  <div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">Error</h4>
+    <p>There was an error performing your search. Please try again with different parameters.</p>
+  </div>
+  {% else %}
+  
   <div class="card mb-4">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
@@ -28,143 +35,298 @@
       </div>
     </div>
     <div class="card-body">
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle-fill"></i> 
-        This is a placeholder template for search results. In a real implementation, actual search results from the database would be displayed here.
+      {% if results %}
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <div class="d-flex align-items-center">
+            <strong>Found {{ results.total_count }} results</strong>
+            <span class="ms-2 badge bg-secondary">Query time: {{ '%0.2f' | format(results.query_time_ms/1000) }}s</span>
+            {% if semantic %}
+              <span class="ms-2 badge bg-info">Semantic Search</span>
+            {% endif %}
+            {% if exact %}
+              <span class="ms-2 badge bg-warning">Exact Match</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#saveSearchModal">
+            <i class="bi bi-bookmark-plus"></i> Save This Search
+          </button>
+        </div>
       </div>
       
       <!-- Filters -->
       <div class="row mb-4">
         <div class="col">
           <div class="card">
-            <div class="card-header">
-              <h6 class="mb-0">Filters</h6>
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">Current Filters</h6>
+              <a href="{{ url_for('search.search_form') }}?q={{ query }}" class="btn btn-sm btn-outline-secondary">Modify Search</a>
             </div>
             <div class="card-body">
               <div class="row">
-                <div class="col-md-4">
-                  <label class="form-label">Content Type</label>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="filter-all" checked>
-                    <label class="form-check-label" for="filter-all">
-                      All Types
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="filter-conversations">
-                    <label class="form-check-label" for="filter-conversations">
-                      Conversations
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="filter-messages">
-                    <label class="form-check-label" for="filter-messages">
-                      Messages
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="filter-media">
-                    <label class="form-check-label" for="filter-media">
-                      Media
-                    </label>
-                  </div>
+                <div class="col-md-3">
+                  <strong>Content Type:</strong>
+                  <p>{{ search_type|capitalize }}</p>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Date Range</label>
-                  <select class="form-select">
-                    <option selected>All Time</option>
-                    <option>Last 24 Hours</option>
-                    <option>Last 7 Days</option>
-                    <option>Last 30 Days</option>
-                    <option>Last Year</option>
-                    <option>Custom Range</option>
-                  </select>
+                <div class="col-md-3">
+                  <strong>Date Range:</strong> 
+                  <p>{{ date_range|replace('_', ' ')|capitalize }}</p>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Sort By</label>
-                  <select class="form-select">
-                    <option selected>Relevance</option>
-                    <option>Date (Newest First)</option>
-                    <option>Date (Oldest First)</option>
-                  </select>
+                <div class="col-md-3">
+                  <strong>Sort By:</strong>
+                  <p>{{ sort|replace('_', ' ')|capitalize }}</p>
+                </div>
+                <div class="col-md-3">
+                  <strong>Search Mode:</strong>
+                  <p>{{ mode|replace('_', ' ')|capitalize }}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
-      <!-- Search Results -->
-      <h5>Found 25 Results</h5>
       
       <!-- Result Items -->
       <div class="list-group mb-4">
-        <!-- Conversation Result -->
-        <div class="list-group-item">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">
-              <i class="bi bi-chat-dots text-primary me-2"></i>
-              <a href="#">Sample Conversation</a>
-            </h5>
-            <small class="text-muted">3 days ago</small>
-          </div>
-          <p class="mb-1">This is a sample conversation with content matching the query "<strong>{{ query }}</strong>". The matching text would be highlighted in the actual search results.</p>
-          <small class="text-muted">10 messages • Last activity: February 22, 2025</small>
-        </div>
-        
-        <!-- Message Result -->
-        <div class="list-group-item">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">
-              <i class="bi bi-chat-text text-success me-2"></i>
-              <a href="#">Message in Sample Conversation</a>
-            </h5>
-            <small class="text-muted">2 days ago</small>
-          </div>
-          <p class="mb-1">This is a sample message with content matching the query "<strong>{{ query }}</strong>". The matching text would be highlighted in the actual search results.</p>
-          <small class="text-muted">From: User • Conversation: <a href="#">Sample Conversation</a></small>
-        </div>
-        
-        <!-- Media Result -->
-        <div class="list-group-item">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">
-              <i class="bi bi-image text-warning me-2"></i>
-              <a href="#">sample_image.jpg</a>
-            </h5>
-            <small class="text-muted">1 day ago</small>
-          </div>
-          <div class="row align-items-center">
-            <div class="col-md-2">
-              <div class="bg-light p-2 text-center rounded">
-                <i class="bi bi-image" style="font-size: 2rem;"></i>
+        {% if search_type == 'vector' or semantic %}
+          <!-- Vector Search Results -->
+          {% for item in results.results %}
+            <div class="list-group-item">
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">
+                  <i class="bi bi-chat-text text-success me-2"></i>
+                  <a href="{{ url_for('messages.view_message', message_id=item.message.id) }}">{{ item.message.content|truncate(60) }}</a>
+                </h5>
+                <div>
+                  <span class="badge bg-primary rounded-pill">Score: {{ '%0.2f' | format(item.score) }}</span>
+                  <small class="text-muted">{{ item.message.created_at }}</small>
+                </div>
               </div>
+              <p class="mb-1">{{ item.message.content|truncate(200) }}</p>
+              <small class="text-muted">From: {{ item.message.role|capitalize }} • 
+                <a href="{{ url_for('conversations.view_conversation', conversation_id=item.conversation_id) }}">
+                  View Conversation
+                </a>
+              </small>
             </div>
-            <div class="col-md-10">
-              <p class="mb-1">Media file with metadata matching "<strong>{{ query }}</strong>". This could be a filename, description, or extracted text content.</p>
-              <small class="text-muted">Type: image/jpeg • Size: 1.2 MB • In message: <a href="#">Message in Sample Conversation</a></small>
+          {% endfor %}
+        {% else %}
+          <!-- Unified Search Results -->
+          {% for item in results.results %}
+            <div class="list-group-item">
+              <!-- Display based on entity type -->
+              {% if item.entity_type == 'conversation' %}
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">
+                    <i class="bi bi-chat-dots text-primary me-2"></i>
+                    <a href="{{ url_for('conversations.view_conversation', conversation_id=item.id) }}">{{ item.title or 'Untitled Conversation' }}</a>
+                  </h5>
+                  <small class="text-muted">{{ item.created_at|default('Unknown date') }}</small>
+                </div>
+                <p class="mb-1">{{ item.snippet|default('')|truncate(200) }}</p>
+                <small class="text-muted">
+                  {{ item.message_count|default('0') }} messages • 
+                  Last activity: {{ item.updated_at|default('Unknown') }}
+                </small>
+              
+              {% elif item.entity_type == 'message' %}
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">
+                    <i class="bi bi-chat-text text-success me-2"></i>
+                    <a href="{{ url_for('messages.view_message', message_id=item.id) }}">Message</a>
+                  </h5>
+                  <small class="text-muted">{{ item.created_at|default('Unknown date') }}</small>
+                </div>
+                <p class="mb-1">{{ item.content|truncate(200) }}</p>
+                <small class="text-muted">
+                  From: {{ item.role|default('Unknown')|capitalize }} • 
+                  <a href="{{ url_for('conversations.view_conversation', conversation_id=item.conversation_id) }}">
+                    View Conversation
+                  </a>
+                </small>
+              
+              {% elif item.entity_type == 'media' %}
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">
+                    <i class="bi bi-image text-warning me-2"></i>
+                    <a href="{{ url_for('media.view_media', media_id=item.id) }}">{{ item.original_file_name or item.file_path }}</a>
+                  </h5>
+                  <small class="text-muted">{{ item.created_at|default('Unknown date') }}</small>
+                </div>
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    {% if item.media_type == 'image' %}
+                      <div class="bg-light p-2 text-center rounded">
+                        <img src="{{ url_for('media.get_media_file', media_id=item.id) }}" 
+                             class="img-fluid thumbnail" alt="{{ item.original_file_name }}">
+                      </div>
+                    {% else %}
+                      <div class="bg-light p-2 text-center rounded">
+                        <i class="bi bi-file-earmark" style="font-size: 2rem;"></i>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-10">
+                    <p class="mb-1">{{ item.meta_info.description|default('No description available') }}</p>
+                    <small class="text-muted">
+                      Type: {{ item.mime_type|default('Unknown type') }} • 
+                      Size: {{ item.file_size|default('Unknown size') }} bytes
+                      {% if item.message_id %}
+                        • Message: <a href="{{ url_for('messages.view_message', message_id=item.message_id) }}">View</a>
+                      {% endif %}
+                    </small>
+                  </div>
+                </div>
+              
+              {% elif item.entity_type == 'chunk' %}
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">
+                    <i class="bi bi-card-text text-info me-2"></i>
+                    <a href="{{ url_for('messages.view_message', message_id=item.message_id) }}">Chunk</a>
+                  </h5>
+                  <small class="text-muted">{{ item.created_at|default('Unknown date') }}</small>
+                </div>
+                <p class="mb-1">{{ item.content|truncate(200) }}</p>
+                <small class="text-muted">
+                  Type: {{ item.chunk_type|default('Unknown')|capitalize }} • 
+                  <a href="{{ url_for('messages.view_message', message_id=item.message_id) }}">
+                    View Source Message
+                  </a>
+                </small>
+              
+              {% elif item.entity_type == 'gencom' %}
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">
+                    <i class="bi bi-robot text-danger me-2"></i>
+                    <span>{{ item.output_type|default('Generated Content')|capitalize }}</span>
+                  </h5>
+                  <small class="text-muted">{{ item.created_at|default('Unknown date') }}</small>
+                </div>
+                <p class="mb-1">{{ item.content|truncate(200) }}</p>
+                <small class="text-muted">
+                  Agent: {{ item.agent_name|default('Unknown') }} • 
+                  Target: {{ item.target_type|default('Unknown')|capitalize }}
+                </small>
+              
+              {% else %}
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">
+                    <i class="bi bi-question-circle text-secondary me-2"></i>
+                    <span>{{ item.entity_type|default('Unknown')|capitalize }}</span>
+                  </h5>
+                  <small class="text-muted">{{ item.created_at|default('Unknown date') }}</small>
+                </div>
+                <p class="mb-1">{{ item.content|default('No content available')|truncate(200) }}</p>
+              {% endif %}
             </div>
-          </div>
-        </div>
+          {% endfor %}
+        {% endif %}
       </div>
       
       <!-- Pagination -->
-      <nav aria-label="Search results pagination">
-        <ul class="pagination justify-content-center">
-          <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
-          </li>
-          <li class="page-item active" aria-current="page">
-            <a class="page-link" href="#">1</a>
-          </li>
-          <li class="page-item"><a class="page-link" href="#">2</a></li>
-          <li class="page-item"><a class="page-link" href="#">3</a></li>
-          <li class="page-item">
-            <a class="page-link" href="#">Next</a>
-          </li>
-        </ul>
-      </nav>
+      {% if results.pagination %}
+        <nav aria-label="Search results pagination">
+          <ul class="pagination justify-content-center">
+            {% set current_page = results.pagination.page|default(1) %}
+            {% set total_pages = results.pagination.pages|default(1) %}
+            
+            <li class="page-item {{ 'disabled' if current_page == 1 else '' }}">
+              <a class="page-link" href="{{ url_for('search.search_results', 
+                                                   q=query, 
+                                                   type=search_type, 
+                                                   mode=mode, 
+                                                   date_range=date_range, 
+                                                   sort=sort,
+                                                   semantic=semantic,
+                                                   exact=exact,
+                                                   page=current_page-1) }}" 
+                 tabindex="-1" {{ 'aria-disabled="true"' if current_page == 1 else '' }}>
+                Previous
+              </a>
+            </li>
+            
+            {% for p in range(1, total_pages + 1) %}
+              <li class="page-item {{ 'active' if p == current_page else '' }}" {{ 'aria-current="page"' if p == current_page else '' }}>
+                <a class="page-link" href="{{ url_for('search.search_results', 
+                                                     q=query, 
+                                                     type=search_type, 
+                                                     mode=mode, 
+                                                     date_range=date_range, 
+                                                     sort=sort,
+                                                     semantic=semantic,
+                                                     exact=exact,
+                                                     page=p) }}">
+                  {{ p }}
+                </a>
+              </li>
+            {% endfor %}
+            
+            <li class="page-item {{ 'disabled' if current_page == total_pages else '' }}">
+              <a class="page-link" href="{{ url_for('search.search_results', 
+                                                   q=query, 
+                                                   type=search_type, 
+                                                   mode=mode, 
+                                                   date_range=date_range, 
+                                                   sort=sort,
+                                                   semantic=semantic,
+                                                   exact=exact,
+                                                   page=current_page+1) }}">
+                Next
+              </a>
+            </li>
+          </ul>
+        </nav>
+      {% endif %}
+      
+      {% else %}
+      <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">No Results Found</h4>
+        <p>Your search for "{{ query }}" did not match any records.</p>
+        <hr>
+        <p class="mb-0">Try different keywords or adjust your search filters.</p>
+      </div>
+      {% endif %}
     </div>
   </div>
+  
+  <!-- Save Search Modal -->
+  <div class="modal fade" id="saveSearchModal" tabindex="-1" aria-labelledby="saveSearchModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="saveSearchModalLabel">Save Search</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form action="{{ url_for('search.save_search') }}" method="post">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="search-name" class="form-label">Search Name</label>
+              <input type="text" class="form-control" id="search-name" name="name" placeholder="Enter a name for this search" required>
+            </div>
+            
+            <input type="hidden" name="query" value="{{ query }}">
+            <input type="hidden" name="type" value="{{ search_type }}">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="date_range" value="{{ date_range }}">
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="semantic" value="{{ 'true' if semantic else 'false' }}">
+            <input type="hidden" name="exact" value="{{ 'true' if exact else 'false' }}">
+            
+            <div class="alert alert-info">
+              <strong>Search Query:</strong> {{ query }}<br>
+              <strong>Filters:</strong> {{ search_type|capitalize }}, {{ date_range|replace('_', ' ')|capitalize }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Search</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
