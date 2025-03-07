@@ -126,19 +126,32 @@ class HTMLRenderer(ContentRenderer):
                 if not isinstance(message.content, str) or not message.content:
                     continue
                 
-                role = self._determine_role(message.meta_info)
+                # Get role from message.role attribute or fallback to metadata
+                role = self._determine_role(message.meta_info, getattr(message, 'role', None))
                 content = message.content
                 
-                # Process gencom fields if present in metadata
+                # Process gencom fields if present in metadata or requested directly
                 gencom_html = ""
-                if gencom_fields != "none" and message.meta_info and "gencom" in message.meta_info:
+                gencom_data = {}
+                
+                # First check meta_info for gencom fields
+                if message.meta_info and "gencom" in message.meta_info:
                     gencom_data = message.meta_info.get("gencom", {})
-                    if gencom_data:
-                        gencom_html = self._render_gencom_fields(
-                            gencom_data, 
-                            gencom_fields, 
-                            gencom_field_labels or {}
-                        )
+                
+                # Then check for agent_outputs attribute from AgentOutput model
+                if hasattr(message, 'agent_outputs') and message.agent_outputs:
+                    # Convert agent outputs to gencom-compatible format
+                    for output in message.agent_outputs:
+                        if output.output_type:
+                            gencom_data[output.output_type] = output.content
+                
+                # Render gencom fields if available and requested
+                if gencom_fields != "none" and gencom_data:
+                    gencom_html = self._render_gencom_fields(
+                        gencom_data, 
+                        gencom_fields, 
+                        gencom_field_labels or {}
+                    )
                 
                 # Include raw markdown before rendered content if requested
                 if include_raw:
@@ -147,9 +160,9 @@ class HTMLRenderer(ContentRenderer):
                 else:
                     content = self.markdown_renderer.render(content, str(message.id))
                 
-                # Add gencom HTML at the end of the content if present
+                # Add gencom HTML at the top of the content if present
                 if gencom_html:
-                    content = f"{content}\n{gencom_html}"
+                    content = f"{gencom_html}\n{content}"
                 
                 # Create rendered item
                 rendered_items.append({
@@ -182,7 +195,7 @@ class HTMLRenderer(ContentRenderer):
             
     def _render_gencom_fields(self, gencom_data: dict, gencom_fields: str, field_labels: dict = None) -> str:
         """
-        Render gencom fields as HTML.
+        Render gencom fields as HTML with collapsible interface.
         
         Args:
             gencom_data: Dictionary of gencom fields and values
@@ -207,10 +220,20 @@ class HTMLRenderer(ContentRenderer):
         if not fields_to_show:
             return ""
             
-        # Build HTML
+        # Generate a unique ID for the collapse element
+        collapse_id = f"gencom-{hash(str(gencom_data))}"
+        
+        # Build HTML with collapsible interface
         field_labels = field_labels or {}
-        html = ['<div class="gencom-fields">']
-        html.append('<h3>Agent Thought Process</h3>')
+        
+        html = [f'<div class="gencom-outer">']
+        html.append(f'<div class="gencom-trigger collapsed" data-bs-toggle="collapse" data-bs-target="#{collapse_id}">')
+        html.append('<i class="fas fa-chevron-down"></i>')
+        html.append('<span>AI Analysis (gencom) available</span>')
+        html.append('</div>')
+        
+        html.append(f'<div class="collapse" id="{collapse_id}">')
+        html.append('<div class="gencom-content">')
         
         for field in fields_to_show:
             # Get display label (use field name if no label provided)
@@ -226,7 +249,14 @@ class HTMLRenderer(ContentRenderer):
             html.append(f'<div class="gencom-field-value">{rendered_value}</div>')
             html.append('</div>')
             
-        html.append('</div>')
+            # Add separator if not the last field
+            if field != fields_to_show[-1]:
+                html.append('<hr>')
+        
+        html.append('</div>') # Close gencom-content
+        html.append('</div>') # Close collapse
+        html.append('</div>') # Close gencom-container
+        
         return "\n".join(html)
             
     def render_search_results(self, results: List[Dict[str, Any]], output_path: str, 
@@ -272,10 +302,25 @@ class HTMLRenderer(ContentRenderer):
             
         return html_content
     
-    def _determine_role(self, metadata: Optional[Dict[str, Any]]) -> str:
+    def _determine_role(self, metadata: Optional[Dict[str, Any]], message_role: str = None) -> str:
         """
-        Determine the role from metadata.
+        Determine the role from message or metadata.
+        First check direct role attribute, then fallback to metadata.
         """
+        if message_role:
+            return message_role.lower()
+            
         if not metadata:
             return "unknown"
-        return metadata.get("author_role", "unknown")
+            
+        # First check author_role in metadata (older format)
+        role = metadata.get("author_role")
+        if role:
+            return role.lower()
+            
+        # Try to extract from author object (ChatGPT format)
+        author = metadata.get("author", {})
+        if isinstance(author, dict) and "role" in author:
+            return author["role"].lower()
+            
+        return "unknown"

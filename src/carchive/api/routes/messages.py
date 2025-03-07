@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify, abort
 from sqlalchemy import desc, func
 from sqlalchemy.orm import joinedload, Session
 
-from carchive.database.models import Message, Media, Conversation
+from carchive.database.models import Message, Media, Conversation, MessageMedia, AgentOutput
 from carchive.api.schemas import MessageBase, MessageDetail, MediaBase
 from carchive.api.routes.utils import (
     db_session, validate_uuid, parse_pagination_params, 
@@ -181,6 +181,43 @@ def get_message_context(message_id: str, session: Session):
         'previous_messages': [MessageBase.from_orm(msg).dict() for msg in reversed(prev_messages)],
         'next_messages': [MessageBase.from_orm(msg).dict() for msg in next_messages],
         'conversation_id': str(message.conversation_id)
+    }
+    
+    return jsonify(result)
+
+
+@bp.route('/<message_id>/gencom', methods=['GET'])
+@db_session
+def get_message_gencom(message_id: str, session: Session):
+    """Get gencom/agent outputs for a specific message."""
+    if not validate_uuid(message_id):
+        return error_response(400, "Invalid message ID format")
+    
+    # Get message
+    message = session.query(Message).filter(Message.id == message_id).first()
+    if not message:
+        return error_response(404, "Message not found")
+    
+    # Get gencom outputs for this message
+    gencom_outputs = session.query(AgentOutput).filter(
+        AgentOutput.target_type == "message",
+        AgentOutput.target_id == message_id
+    ).order_by(AgentOutput.created_at).all()
+    
+    # Format response
+    output_list = []
+    for output in gencom_outputs:
+        output_list.append({
+            'id': str(output.id),
+            'output_type': output.output_type,
+            'content': output.content,
+            'agent_name': output.agent_name,
+            'created_at': output.created_at.isoformat() if output.created_at else None
+        })
+    
+    result = {
+        'message_id': message_id,
+        'outputs': output_list
     }
     
     return jsonify(result)
