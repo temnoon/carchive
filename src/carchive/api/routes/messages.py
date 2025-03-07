@@ -32,7 +32,7 @@ def get_messages(session: Session):
     sort_order = request.args.get('order', 'desc')
     
     # Build query
-    query = session.query(Message).options(joinedload(Message.media))
+    query = session.query(Message).options(joinedload(Message.media_items))
     
     # Apply filters
     if conversation_id:
@@ -48,9 +48,12 @@ def get_messages(session: Session):
         query = query.filter(Message.meta_info['author_role'].astext == role_filter)
     
     if has_media == 'true':
-        query = query.filter(Message.media_id.isnot(None))
+        # Use media_items relationship for filtering
+        query = query.join(MessageMedia, Message.id == MessageMedia.message_id).distinct()
     elif has_media == 'false':
-        query = query.filter(Message.media_id.is_(None))
+        # Subquery approach to find messages without media
+        subquery = session.query(MessageMedia.message_id)
+        query = query.filter(~Message.id.in_(subquery))
     
     # Apply sorting
     if sort_order.lower() == 'asc':
@@ -62,8 +65,16 @@ def get_messages(session: Session):
     messages, total = paginate_query(query, page, per_page)
     
     # Format response
+    formatted_messages = []
+    for msg in messages:
+        msg_dict = MessageDetail.from_orm(msg).dict()
+        # Replace media with media_items for compatibility
+        if hasattr(msg, 'media_items') and msg.media_items:
+            msg_dict['media'] = MediaBase.from_orm(msg.media_items[0]).dict() if msg.media_items else None
+        formatted_messages.append(msg_dict)
+            
     result = {
-        'messages': [MessageDetail.from_orm(msg).dict() for msg in messages],
+        'messages': formatted_messages,
         'pagination': {
             'page': page,
             'per_page': per_page,
@@ -84,7 +95,7 @@ def get_message(message_id: str, session: Session):
     
     # Get message with media
     message = session.query(Message).filter(Message.id == message_id) \
-        .options(joinedload(Message.media)) \
+        .options(joinedload(Message.media_items)) \
         .first()
     
     if not message:
@@ -103,6 +114,11 @@ def get_message(message_id: str, session: Session):
     
     # Create response
     result = MessageDetail.from_orm(message).dict()
+    
+    # Add media from media_items for compatibility
+    if hasattr(message, 'media_items') and message.media_items:
+        result['media'] = MediaBase.from_orm(message.media_items[0]).dict() if message.media_items else None
+    result['media_items'] = [MediaBase.from_orm(media).dict() for media in message.media_items] if hasattr(message, 'media_items') else []
     
     # Add referenced media
     result['referenced_media'] = [

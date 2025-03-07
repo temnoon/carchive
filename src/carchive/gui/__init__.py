@@ -48,6 +48,10 @@ def create_app(test_config=None):
     from carchive.gui.views.search import bp as search_bp
     from carchive.gui.views.cli import bp as cli_bp
     from carchive.gui.views.collections import bp as collections_bp
+    from carchive.gui.views.render import bp as render_bp
+    from carchive.gui.views.gencom import bp as gencom_bp
+    from carchive.gui.views.embeddings import bp as embeddings_bp
+    from carchive.gui.views.clusters import bp as clusters_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(conversations_bp)
@@ -56,6 +60,10 @@ def create_app(test_config=None):
     app.register_blueprint(search_bp)
     app.register_blueprint(cli_bp)
     app.register_blueprint(collections_bp)
+    app.register_blueprint(render_bp)
+    app.register_blueprint(gencom_bp)
+    app.register_blueprint(embeddings_bp)
+    app.register_blueprint(clusters_bp)
     
     @app.errorhandler(404)
     def page_not_found(e):
@@ -72,7 +80,7 @@ def create_app(test_config=None):
     def utility_processor():
         """Add utilities to template context."""
         return {
-            'app_name': 'Carchive2 Explorer'
+            'app_name': 'Carchive Explorer'
         }
     
     @app.template_filter('datetime')

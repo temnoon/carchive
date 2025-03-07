@@ -26,7 +26,7 @@ class MediaBase(BaseModel):
 class MessageBase(BaseModel):
     """Base schema for messages."""
     id: UUID
-    conversation_id: UUID
+    conversation_id: Optional[UUID] = None
     content: Optional[str] = None
     created_at: datetime
     meta_info: Optional[Dict[str, Any]] = None
