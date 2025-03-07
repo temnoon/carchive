@@ -1,5 +1,81 @@
 # CLAUDE.md - carchive Development Guide
 
+  ## Carchive Architecture Standards
+
+  ### Technology Stack Standards
+  - **Web Framework**: Flask for both API and GUI (standardized)
+  - **Type Validation**: Pydantic with flask-pydantic integration
+  - **Database ORM**: SQLAlchemy with explicit session management
+  - **CLI Framework**: Typer for command-line interfaces
+  - **Environment Management**: Poetry for dependency management
+
+  ### Directory Structure Standards
+  - `/src/carchive/`: Main application code
+    - `/agents/`: Agent implementations
+    - `/api/`: API server (Flask)
+    - `/gui/`: Web interface (Flask)
+    - `/database/`: Models and connection handling
+    - `/cli/`: Command-line tools
+    - `/utils/`: Shared utilities
+    - `/schemas/`: Pydantic models
+    - `/scripts/`: Core utility scripts used by components
+  - `/scripts/`: One-off utility scripts (should be minimal)
+  - Root directory: Only essential entry points and environment setup
+
+  ### Code Standards
+  1. **Flask Integration**:
+     - Use Flask for all web serving (API and GUI)
+     - Use blueprints for route organization
+     - Explicitly handle database sessions
+
+  2. **Pydantic Usage**:
+     - Define schemas in `/src/carchive/schemas/`
+     - Use `flask-pydantic` for request/response validation
+     - Enable `orm_mode=True` for easy conversion from SQLAlchemy
+     - Use `validate_arguments` decorator for internal function validation
+
+  3. **Database Patterns**:
+     - Use context managers for sessions (`with get_session() as session:`)
+     - Define explicit relationships in SQLAlchemy models
+     - Validate inputs before database operations
+
+  4. **Error Handling**:
+     - Use custom exception classes
+     - Return consistent error structures in API responses
+     - Log errors with appropriate levels (warning, error, etc.)
+
+  5. **CLI Commands**:
+     - Use `server_cli.py` for all server management
+     - Structure commands in logical hierarchy
+     - Provide clear help text
+
+  ### Server Management
+  - All servers run on 8000 (API) and 8001 (GUI) ports
+  - Server management happens exclusively through CLI
+  - Example: `poetry run carchive server start-all`
+  - Avoid direct use of Flask's development server in production
+
+  ### Migration Plan
+  1. Retire all code related to ports 5000/5001
+  2. Convert FastAPI routes to Flask with Pydantic validation
+  3. Consolidate script organization
+  4. Remove all "carchive2" references
+  5. Standardize on Flask+Pydantic patterns
+
+  ### Naming Standards
+  - Project name is "carchive" (never "carchive2")
+  - Use consistent naming across all components
+  - File names should reflect purpose (e.g., `conversation_service.py`)
+
+  ### Development Workflow
+  - Development happens on feature branches
+  - Tests must pass before merging
+  - CLI commands for environment setup and testing
+
+
+---
+
+
 ## Build and Run Commands
 - Setup: `poetry install`
 - Run CLI: `poetry run carchive`
@@ -8,6 +84,11 @@
 - Add dependency: `poetry add package_name`
 - Create new database: `./setup_carchive04_db.sh`
 - Migrate ChatGPT archive: `poetry run carchive migrate chatgpt chat2/conversations.json`
+- Start servers: `poetry run carchive server start-all --api-port 8000 --gui-port 8001`
+- Stop servers: `poetry run carchive server stop`
+- Server status: `poetry run carchive server status`
+
+---
 
 ## Code Style Guidelines
 - **Structure**: Follow modular design with core/, database/, agents/, etc. folders
@@ -19,9 +100,29 @@
 - **SQLAlchemy**: Follow established patterns for models with descriptive relationships
 - **CLI**: Implement with Typer, with clear help text and logical command structure
 - **Testing**: Test files should be in tests/ directory with clear test_* naming
+- **Validation**: Use Pydantic models for request/response validation
+- **API Routes**: Use flask-pydantic for endpoint validation
+- **Schemas**: Define Pydantic models with orm_mode=True for ORM compatibility
+- **Database Access**: Always use context managers for session handling:
+  ```python
+  with get_session() as session:
+      # database operations
+  ```
+---
+
 
 ## PostgreSQL and pgvector
-This project uses PostgreSQL with pgvector for vector embeddings, requiring proper database setup.
+  This project uses PostgreSQL with pgvector for vector embeddings, requiring proper database setup.
+
+  Initial setup requires PostgreSQL 13+ with pgvector extension. Configure connection settings in:
+  - `.env` file (for development)
+  - Environment variables (for production)
+  - Command-line parameters (for one-off operations)
+
+  Connection string template: `postgresql://carchive_app:carchive_pass@localhost:5432/carchive04_db`
+
+---
+
 
 ## Important Implementation Details
 
@@ -77,6 +178,15 @@ NOTE: The approach of extracting timestamps from the first 8 characters of `sour
 a hexadecimal Unix timestamp was attempted but found to be unreliable, producing dates far in the future for
 older conversations.
 
+ ### Server Architecture
+  - API server runs on port 8000 using Flask with Pydantic validation
+  - GUI server runs on port 8001 using Flask templates
+  - Server management happens through the CLI interface
+  - Configuration is passed through environment variables or CLI parameters
+  - The `server_cli.py` provides programmatic access to server management
+
+---
+
 # Important Details for Working with Chat Archives
 
 ## Carchive04 Database Structure
@@ -102,14 +212,33 @@ The new carchive04_db is designed for multi-provider imports with improved data 
 - Support for multiple vector embedding types and dimensions
 - Tagged and collection-based organization
 
+---
+
 ## ChatGPT Migration Process
 
 ### Setup and Initial Migration
-1. Run `./setup_carchive04_db.sh` to create the database
-2. Use `poetry run carchive migrate chatgpt --db-name=carchive04_db --db-user=carchive_app --db-password=carchive_pass chat2/conversations.json` for ChatGPT archives
-3. Media files are copied to a structured directory and linked in the database
+1. Set up the database: `poetry run carchive db setup`
+2. Migrate ChatGPT archives: `poetry run carchive migrate chatgpt path/to/conversations.json`
+3. Media handling is automatic through the CLI
 
-### Media File Handling
+---
+
+
+ ## Media Handling
+
+  ### Storage Structure
+  Media files are stored in a structured directory:
+  - Base path: `./media/`
+  - Files stored with UUID-based names
+  - Original filenames and metadata stored in database
+  - Access through API endpoints: `/api/media/{media_id}`
+
+  ### Media Processing
+  - Thumbnails generated for images
+  - PDF previews created for documents
+  - Links established between messages and media through `message_media` table
+  - DALL-E images properly associated with their generating messages
+
 The media files in ChatGPT exports follow a naming convention:
 ```
 file-{ID}-{original_filename}
@@ -148,6 +277,30 @@ poetry run carchive migrate chatgpt --db-name=mydb --db-user=myuser --db-passwor
 # With custom media directories
 poetry run carchive migrate chatgpt --media-dir=path/to/media --target-media-dir=path/to/destination path/to/conversations.json
 ```
+
+---
+
+## Server Configuration
+
+  ### Default Ports
+  - API server: 8000
+  - GUI server: 8001
+
+  ### Environment Variables
+  - `CARCHIVE_DB_URI`: Database connection string
+  - `CARCHIVE_MEDIA_DIR`: Media storage directory
+  - `CARCHIVE_API_URL`: URL for API (used by GUI)
+  - `FLASK_DEBUG`: Enable debug mode (1) or disable (0)
+  - `CARCHIVE_CORS_ENABLED`: Enable CORS support
+
+  ### Configuration Precedence
+  1. Command-line arguments
+  2. Environment variables
+  3. Configuration files
+  4. Default values
+
+---
+
 
 ## ChatGPT Archive Format Notes
 
@@ -214,6 +367,7 @@ poetry run carchive migrate chatgpt --media-dir=path/to/media --target-media-dir
     }
     // More conversations...
   ]
+```
 
   Timestamp Handling
 
@@ -258,3 +412,5 @@ poetry run carchive migrate chatgpt --media-dir=path/to/media --target-media-dir
 
   # Find conversations with specific issues
   jq -r 'map(select(.title | contains("specific term")))' conversations.json
+
+---

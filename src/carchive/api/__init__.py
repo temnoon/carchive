@@ -1,5 +1,5 @@
 """
-API module for carchive2.
+API module for carchive.
 """
 
 from flask import Flask, jsonify
@@ -40,7 +40,8 @@ def create_app(test_config=None):
                 '/api/media',
                 '/api/search',
                 '/api/collections',
-                '/api/cli'
+                '/api/cli',
+                '/api/gencom'
             ]
         })
     
@@ -51,6 +52,7 @@ def create_app(test_config=None):
     from carchive.api.routes.search import bp as search_bp
     from carchive.api.routes.cli import bp as cli_bp
     from carchive.api.routes.collections import bp as collections_bp
+    from carchive.api.routes.gencom_adapter import bp as gencom_bp
     
     app.register_blueprint(conversations_bp)
     app.register_blueprint(messages_bp)
@@ -58,5 +60,6 @@ def create_app(test_config=None):
     app.register_blueprint(search_bp)
     app.register_blueprint(cli_bp)
     app.register_blueprint(collections_bp)
+    app.register_blueprint(gencom_bp)
     
     return app
