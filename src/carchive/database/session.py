@@ -1,6 +1,7 @@
 # carchive/src/carchive/database/session.py
 
 import contextlib
+import functools
 from sqlalchemy.orm import sessionmaker
 from carchive.database.engine import engine
 
@@ -18,3 +19,19 @@ def get_session():
         yield db
     finally:
         db.close()
+
+def db_session(func):
+    """
+    Decorator to provide a session to the wrapped function.
+    The session is automatically closed after the function returns.
+    
+    Use as:
+        @db_session
+        def my_function(session, *args, **kwargs):
+            ...
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with get_session() as session:
+            return func(session, *args, **kwargs)
+    return wrapper

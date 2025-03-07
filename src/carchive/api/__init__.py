@@ -40,6 +40,10 @@ def create_app(test_config=None):
                 '/api/media',
                 '/api/search',
                 '/api/collections',
+                '/api/render',
+                '/api/gencom',
+                '/api/embeddings',
+                '/api/clusters',
                 '/api/cli'
             ]
         })
@@ -51,6 +55,10 @@ def create_app(test_config=None):
     from carchive.api.routes.search import bp as search_bp
     from carchive.api.routes.cli import bp as cli_bp
     from carchive.api.routes.collections import bp as collections_bp
+    from carchive.api.routes.render import bp as render_bp
+    from carchive.api.routes.gencom_adapter import gencom_bp
+    from carchive.api.routes.embeddings import bp as embeddings_bp
+    from carchive.api.routes.clusters import bp as clusters_bp
     
     app.register_blueprint(conversations_bp)
     app.register_blueprint(messages_bp)
@@ -58,5 +66,9 @@ def create_app(test_config=None):
     app.register_blueprint(search_bp)
     app.register_blueprint(cli_bp)
     app.register_blueprint(collections_bp)
+    app.register_blueprint(render_bp)
+    app.register_blueprint(gencom_bp)
+    app.register_blueprint(embeddings_bp)
+    app.register_blueprint(clusters_bp)
     
     return app
