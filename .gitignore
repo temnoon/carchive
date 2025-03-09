@@ -45,14 +45,48 @@ htmlcov/
 # Large data and chat files - excluding personal data
 chat/*
 chat2/*
+chat3/*
 Anthropic/*
 !chat/.gitkeep
 facebook-temnoon-2025-01-30-4w69iQe0/
 *.zip
 media/
+media_new/
 *conversations.json
-fix_timestamps.py
-view_output.py
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!pyproject.json
+fix_*.py
+view_*.py
+create_*.py
+apply_*.sh
+set_*.sh
+run_*.sh
+*.html
+*mapping*.csv
+*mapping*.ods
+*mapping*.numbers
+.~lock.*
+*-message-fix-log.txt
+*_report.txt
+cluster_*
+clusters_*
+user_categories.png
+assistant_categories.png
+verify_*
+*_analysis*.py
+*_analysis.sh
+venv*/
+test_*.py
+!tests/test_*.py
+*README.md
+!README.md
+*.md
+!CLAUDE.md
+!LICENSE.md
+# Should have all alembic migrations committed, including c0debb123456
 
 # Output directories - excluding test outputs
 output/
