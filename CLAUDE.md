@@ -10,6 +10,9 @@
   - **Environment Management**: Poetry for dependency management
 
   ### Directory Structure Standards
+  - Full Path to project directory from local filesystem root:
+  - '/Users/tem/archive/carchive/'
+  Relative paths from project directory:
   - `/src/carchive/`: Main application code
     - `/agents/`: Agent implementations
     - `/api/`: API server (Flask)
@@ -20,7 +23,7 @@
     - `/schemas/`: Pydantic models
     - `/scripts/`: Core utility scripts used by components
   - `/scripts/`: One-off utility scripts (should be minimal)
-  - Root directory: Only essential entry points and environment setup
+  - Root project directory: Essential entry points, environment setup, source data archives and expanded archives.
 
   ### Code Standards
   1. **Flask Integration**:
@@ -118,6 +121,16 @@
 - Start servers: `poetry run carchive server start-all --api-port 8000 --gui-port 8001`
 - Stop servers: `poetry run carchive server stop`
 - Server status: `poetry run carchive server status`
+- Reset media records: `python reset_media_db.py`
+- Import media from chat3: `python import_chat3_media.py --source-dir chat3 --target-dir media_new`
+- Run media restructure script: `./apply_chat3_media_import.sh` (combines reset and import)
+
+## Media CLI Commands
+- Media analysis: `poetry run carchive media analyze-media-distribution`
+- Find media: `poetry run carchive media find --media-type image --limit 10`
+- Find conversations with media: `poetry run carchive media find-conversations --media-type image --limit 10`
+- Link AI-generated images: `poetry run carchive media link-ai-generated-images`
+- Media restructuring: `poetry run carchive media restructure --source-dirs chat chat2 chat3 --target-dir media_new --no-dry-run`
 
 ---
 
@@ -258,17 +271,39 @@ The new carchive04_db is designed for multi-provider imports with improved data 
  ## Media Handling
 
   ### Storage Structure
-  Media files are stored in a structured directory:
-  - Base path: `./media/`
-  - Files stored with UUID-based names
-  - Original filenames and metadata stored in database
+  Media files are now stored in a structured directory hierarchy:
+  - Base path: `./media_new/`
+  - Organized hierarchically by provider and archive source:
+    ```
+    media_new/
+    ├── chatgpt/
+    │   ├── chat/     # Files from the chat archive
+    │   ├── chat2/    # Files from the chat2 archive
+    │   └── chat3/    # Files from the chat3 archive (most complete)
+    └── shared/       # Shared files across archives
+    ```
+  - Original filenames are preserved (no longer renamed to UUIDs)
+  - Original paths and checksums stored in database
   - Access through API endpoints: `/api/media/{media_id}`
 
+  ### Media Table Structure
+  The `media` table has been enhanced with additional columns:
+  - `archive_source`: Stores the original archive source (chat, chat2, chat3)
+  - `relative_path`: Path relative to the media root directory
+  - `original_path`: The full original path in the source archive
+  - `checksum`: MD5 checksum for file verification and deduplication
+
+  Additional indexes have been added for:
+  - `original_file_id`: To quickly find files by their original ID
+  - `checksum`: To detect duplicates
+
   ### Media Processing
+  - Original filenames preserved during import
   - Thumbnails generated for images
   - PDF previews created for documents
   - Links established between messages and media through `message_media` table
   - DALL-E images properly associated with their generating messages
+  - Robust file lookups with fallbacks to other archives if a file is missing
 
 The media files in ChatGPT exports follow a naming convention:
 ```
@@ -278,7 +313,7 @@ file-{ID}-{original_filename}
 Where the ID is not exactly the same as the attachment ID in the JSON, but contains it. The migration adapter uses flexible matching to find the correct file:
 1. First tries an exact match with the full attachment ID
 2. If that fails, it tries matching by the first 8 characters of the ID
-3. When a match is found, it copies the file to the media directory with a UUID-based name
+3. When a match is found, it copies the file to the new directory structure preserving the original filename
 
 ### Handling Different Content Types
 ChatGPT exports contain various message content types, handled as follows:
@@ -319,7 +354,7 @@ poetry run carchive migrate chatgpt --media-dir=path/to/media --target-media-dir
 
   ### Environment Variables
   - `CARCHIVE_DB_URI`: Database connection string
-  - `CARCHIVE_MEDIA_DIR`: Media storage directory
+  - `CARCHIVE_MEDIA_DIR`: Media storage directory (set to `media_new` for the restructured media)
   - `CARCHIVE_API_URL`: URL for API (used by GUI)
   - `FLASK_DEBUG`: Enable debug mode (1) or disable (0)
   - `CARCHIVE_CORS_ENABLED`: Enable CORS support
