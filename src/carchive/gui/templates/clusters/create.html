@@ -1,0 +1,160 @@
+{% extends 'layout.html' %}
+
+{% block title %}Create Clusters | {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .algorithm-params {
+        display: none;
+    }
+    
+    .algorithm-params.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Create Clusters</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="{{ url_for('clusters.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Clusters
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Clustering Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('clusters.create') }}">
+                        <!-- Algorithm Selection -->
+                        <div class="mb-3">
+                            <label for="algorithm" class="form-label">Clustering Algorithm</label>
+                            <select id="algorithm" name="algorithm" class="form-select" required>
+                                <option value="kmeans" selected>K-Means</option>
+                                <option value="dbscan">DBSCAN</option>
+                            </select>
+                        </div>
+                        
+                        <!-- K-Means Parameters -->
+                        <div id="kmeans-params" class="algorithm-params active">
+                            <div class="mb-3">
+                                <label for="n_clusters" class="form-label">Number of Clusters</label>
+                                <input type="number" id="n_clusters" name="n_clusters" class="form-control" value="10" min="2" max="100" required>
+                                <div class="form-text">How many clusters to create. Higher values create more specific clusters.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- DBSCAN Parameters -->
+                        <div id="dbscan-params" class="algorithm-params">
+                            <div class="mb-3">
+                                <label for="eps" class="form-label">Epsilon (Max Distance)</label>
+                                <input type="number" id="eps" name="eps" class="form-control" value="0.5" min="0.1" max="2.0" step="0.1" required>
+                                <div class="form-text">Maximum distance between two samples to be considered in the same cluster.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="min_samples" class="form-label">Minimum Samples</label>
+                                <input type="number" id="min_samples" name="min_samples" class="form-control" value="5" min="2" max="100" required>
+                                <div class="form-text">Minimum number of samples in a neighborhood to form a cluster.</div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Collection Options -->
+                        <h6>Collection Options</h6>
+                        
+                        <div class="mb-3">
+                            <label for="collection_prefix" class="form-label">Collection Name Prefix</label>
+                            <input type="text" id="collection_prefix" name="collection_prefix" class="form-control" value="Cluster">
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="exclude_outliers" name="exclude_outliers" value="true" checked>
+                            <label class="form-check-label" for="exclude_outliers">Exclude Outliers</label>
+                            <div class="form-text">When checked, items not belonging to any cluster will be excluded.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="max_clusters" class="form-label">Maximum Clusters to Create</label>
+                            <input type="number" id="max_clusters" name="max_clusters" class="form-control" value="" min="1" max="100">
+                            <div class="form-text">Limit the number of collections created (blank for no limit).</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="limit" class="form-label">Limit Embeddings</label>
+                            <input type="number" id="limit" name="limit" class="form-control" value="" min="100">
+                            <div class="form-text">Limit the number of embeddings to process (blank for no limit).</div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Topic Options -->
+                        <h6>Topic Options</h6>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="generate_topics" name="generate_topics" value="true" checked>
+                            <label class="form-check-label" for="generate_topics">Generate Topics</label>
+                            <div class="form-text">When checked, an LLM will be used to generate topic descriptions for each cluster.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="topic_provider" class="form-label">Topic Provider</label>
+                            <select id="topic_provider" name="topic_provider" class="form-select">
+                                <option value="ollama" selected>Ollama</option>
+                                <option value="openai">OpenAI</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> This process may take a while, especially with a large number of embeddings. Please be patient.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('clusters.index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Clusters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const algorithmSelect = document.getElementById('algorithm');
+        const kmeansParams = document.getElementById('kmeans-params');
+        const dbscanParams = document.getElementById('dbscan-params');
+        
+        function updateAlgorithmParams() {
+            // Hide all parameter sections
+            kmeansParams.classList.remove('active');
+            dbscanParams.classList.remove('active');
+            
+            // Show the selected algorithm parameters
+            if (algorithmSelect.value === 'kmeans') {
+                kmeansParams.classList.add('active');
+            } else if (algorithmSelect.value === 'dbscan') {
+                dbscanParams.classList.add('active');
+            }
+        }
+        
+        // Initialize
+        updateAlgorithmParams();
+        
+        // Update on change
+        algorithmSelect.addEventListener('change', updateAlgorithmParams);
+    });
+</script>
+{% endblock %}

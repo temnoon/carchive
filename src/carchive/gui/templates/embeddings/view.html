@@ -1,0 +1,164 @@
+{% extends 'layout.html' %}
+
+{% block title %}View Embedding | {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .vector-preview {
+        max-height: 150px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>View Embedding</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="{{ url_for('embeddings.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Embeddings
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Embedding Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Basic Information</h6>
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th>ID</th>
+                                        <td>{{ embedding.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Provider</th>
+                                        <td>{{ embedding.model_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Model</th>
+                                        <td>{{ embedding.model_version }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Dimensions</th>
+                                        <td>{{ embedding.dimensions }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Created</th>
+                                        <td>{{ embedding.created_at|datetime }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Updated</th>
+                                        <td>{{ embedding.updated_at|datetime }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Relationships</h6>
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th>Parent Type</th>
+                                        <td>{{ embedding.parent_type|default('raw_text') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Parent ID</th>
+                                        <td>{{ embedding.parent_id|default('N/A') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Message ID</th>
+                                        <td>
+                                            {% if embedding.parent_message_id %}
+                                            <a href="{{ url_for('messages.view_message', message_id=embedding.parent_message_id) }}">
+                                                {{ embedding.parent_message_id }}
+                                            </a>
+                                            {% else %}
+                                            N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if embedding.message %}
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h6>Message Content</h6>
+                            <div class="card">
+                                <div class="card-header">
+                                    {{ embedding.message.role|capitalize }} Message
+                                    {% if embedding.message.author_name %}
+                                    <span class="text-muted">({{ embedding.message.author_name }})</span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    <p>{{ embedding.message.content_preview }}</p>
+                                    
+                                    <a href="{{ url_for('messages.view_message', message_id=embedding.message.id) }}" class="btn btn-sm btn-outline-primary">
+                                        View Full Message
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h6>Vector Preview</h6>
+                            <div class="vector-preview">
+                                [
+                                {% for value in embedding.vector[:20] %}
+                                    {{value}}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                                {% if embedding.vector|length > 20 %}
+                                    ... ({{ embedding.vector|length - 20 }} more values)
+                                {% endif %}
+                                ]
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if embedding.meta_info %}
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h6>Metadata</h6>
+                            <div class="vector-preview">
+                                <pre>{{ embedding.meta_info|tojson(indent=2) }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <form method="post" action="{{ url_for('embeddings.delete', embedding_id=embedding.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this embedding?');">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> Delete Embedding
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

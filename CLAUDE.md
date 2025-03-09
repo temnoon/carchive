@@ -55,6 +55,37 @@
   - Example: `poetry run carchive server start-all`
   - Avoid direct use of Flask's development server in production
 
+  ### Standard Workflow
+  1. Activate the Python environment (preferably Python 3.10):
+     ```bash
+     # If using venv_310 (recommended)
+     source venv_310/bin/activate
+
+     # Set PYTHONPATH
+     export PYTHONPATH=$PWD/src:$PYTHONPATH
+     ```
+
+  2. Check server status:
+     ```bash
+     carchive server status
+     ```
+
+  3. Start both servers:
+     ```bash
+     carchive server start-all
+     ```
+
+  4. Stop servers when done:
+     ```bash
+     carchive server stop
+     ```
+
+  5. When making changes to CLI commands, test with:
+     ```bash
+     # Run a single command
+     python -m carchive.cli.main_cli server status
+     ```
+
   ### Migration Plan
   1. Retire all code related to ports 5000/5001
   2. Convert FastAPI routes to Flask with Pydantic validation
@@ -120,7 +151,7 @@
   - Command-line parameters (for one-off operations)
 
   Connection string template: `postgresql://carchive_app:carchive_pass@localhost:5432/carchive04_db`
-
+  For development work when the current state of the database tables needs to be checked, use the 'postgres' postgreSQL user, to have simple access to all tables, data and priviledges from the context of the development user account.
 ---
 
 

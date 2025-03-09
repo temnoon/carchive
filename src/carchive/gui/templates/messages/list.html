@@ -3,72 +3,256 @@
 {% block title %}Messages{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="my-4">Messages</h1>
-  
-  <div class="card mb-4">
-    <div class="card-header">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Messages List</h5>
-        <div>
-          <form class="d-flex" role="search">
-            <input class="form-control me-2" type="search" placeholder="Search messages" aria-label="Search">
-            <button class="btn btn-outline-primary" type="submit">Search</button>
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+          <h2 class="mb-0">Message Search</h2>
+          <div>
+            <a href="{{ url_for('conversations.list_conversations') }}" class="btn btn-light btn-sm">
+              <i class="fas fa-arrow-left"></i> Back to Conversations
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if api_error %}
+            <div class="alert alert-warning mb-4">
+              <h4 class="alert-heading">API Connection Issue</h4>
+              <p>{{ api_error }}</p>
+              <hr>
+              <p class="mb-0">Please ensure the API server is running at port 8000. You can try restarting the servers with <code>poetry run carchive server start-all</code></p>
+              <div class="mt-3">
+                <button onclick="window.location.reload()" class="btn btn-outline-primary">
+                  <i class="fas fa-sync"></i> Retry
+                </button>
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary ml-2">
+                  <i class="fas fa-home"></i> Go to Home
+                </a>
+              </div>
+            </div>
+          {% endif %}
+          
+          <!-- Search Form -->
+          <form action="{{ url_for('messages.list_messages') }}" method="GET" class="mb-4">
+            <div class="row g-3 align-items-center">
+              <div class="col-md-6">
+                <div class="input-group">
+                  <input type="text" name="q" class="form-control" placeholder="Search messages and gencom content..." value="{{ query }}" aria-label="Search">
+                  <button class="btn btn-primary" type="submit">Search</button>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <select name="role" class="form-select" aria-label="Role filter">
+                  <option value="" {% if not role %}selected{% endif %}>All Roles</option>
+                  <option value="user" {% if role == 'user' %}selected{% endif %}>User</option>
+                  <option value="assistant" {% if role == 'assistant' %}selected{% endif %}>Assistant</option>
+                  <option value="system" {% if role == 'system' %}selected{% endif %}>System</option>
+                  <option value="tool" {% if role == 'tool' %}selected{% endif %}>Tool</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="gencomToggle" name="gencom" value="true" {% if show_gencom %}checked{% endif %}>
+                  <label class="form-check-label" for="gencomToggle">Include AI Analysis</label>
+                </div>
+              </div>
+              <div class="col-md-2 text-end">
+                <button type="button" class="btn btn-outline-secondary" id="advancedSearchToggle">
+                  <i class="fas fa-cog"></i> Advanced
+                </button>
+              </div>
+            </div>
+            
+            <div id="advancedSearchOptions" class="mt-3" style="display: none;">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label for="per_page" class="form-label">Results per page</label>
+                  <select name="per_page" id="per_page" class="form-select">
+                    <option value="10" {% if pagination.per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if pagination.per_page == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if pagination.per_page == 100 %}selected{% endif %}>100</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </form>
+          
+          <!-- Messages List -->
+          {% if messages %}
+            <div class="conversation-messages">
+              {% for message in messages %}
+                <div class="message-container mb-4 message-{{ message.role }}">
+                  <div class="message-header d-flex justify-content-between align-items-center py-2 px-3 rounded-top 
+                    {% if message.role == 'user' %}bg-primary text-white
+                    {% elif message.role == 'assistant' %}bg-secondary text-white
+                    {% elif message.role == 'system' %}bg-secondary text-white
+                    {% elif message.role == 'tool' %}bg-warning text-dark
+                    {% else %}bg-light text-dark{% endif %}">
+                    <div>
+                      <strong>{{ message.role|title }}</strong>
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <small class="me-2">{{ message.created_at|datetime if message.created_at is defined else 'Unknown' }}</small>
+                      <a href="{{ url_for('messages.view_message', message_id=message.id) }}" class="btn btn-sm btn-light ms-2" title="View full message">
+                        <i class="fas fa-expand-alt"></i>
+                      </a>
+                      <a href="{{ url_for('conversations.view_conversation', conversation_id=message.conversation_id) }}" class="btn btn-sm btn-light ms-1" title="View in conversation">
+                        <i class="fas fa-comments"></i>
+                      </a>
+                    </div>
+                  </div>
+                  
+                  {% if show_gencom and message.has_gencom and message.gencom %}
+                    <div class="gencom-outer border border-bottom-0 border-top-0 px-3 py-1">
+                      <div class="gencom-trigger collapsed" data-bs-toggle="collapse" data-bs-target="#gencom-{{ message.id }}">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>AI Analysis (gencom) available</span>
+                      </div>
+                      <div class="collapse" id="gencom-{{ message.id }}">
+                        <div class="gencom-content">
+                          {% for output in message.gencom %}
+                            <div class="gencom-field">
+                              <div class="gencom-field-label">{{ output.output_type|replace('_', ' ')|title }}</div>
+                              <div class="gencom-field-value">{{ output.content|safe }}</div>
+                            </div>
+                            {% if not loop.last %}<hr>{% endif %}
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                  
+                  <div class="message-content p-3 border border-top-0 rounded-bottom {% if show_gencom and message.has_gencom and message.gencom %}border-top-radius-0{% endif %}">
+                    {% if message.role == 'tool' and message.content|trim|first == '{' and message.content|trim|last == '}' %}
+                      <pre class="tool-json">{{ message.content|trim }}</pre>
+                    {% else %}
+                      {{ message.content|safe }}
+                    {% endif %}
+                    
+                    {% if message.media_items %}
+                      <div class="message-media mt-3">
+                        <h5>Media:</h5>
+                        <div class="row">
+                          {% for media in message.media_items %}
+                            <div class="col-md-3 mb-3">
+                              <a href="{{ url_for('media.view_media', media_id=media.id) }}" class="media-thumbnail">
+                                <img src="{{ url_for('media.thumbnail', media_id=media.id) }}" alt="{{ media.filename }}" class="img-thumbnail">
+                                <div class="mt-1 small text-truncate">{{ media.filename }}</div>
+                              </a>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if pagination and pagination.pages > 1 %}
+              <nav aria-label="Message pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                  {% if pagination.page > 1 %}
+                    <li class="page-item">
+                      <a class="page-link" href="{{ url_for('messages.list_messages', q=query, role=role, page=pagination.page-1, per_page=pagination.per_page, gencom='true' if show_gencom else 'false') }}">
+                        Previous
+                      </a>
+                    </li>
+                  {% else %}
+                    <li class="page-item disabled">
+                      <span class="page-link">Previous</span>
+                    </li>
+                  {% endif %}
+                  
+                  {# Calculate page range manually instead of using max/min functions #}
+                  {% set start_page = pagination.page - 2 if pagination.page - 2 > 0 else 1 %}
+                  {% set end_page = pagination.page + 2 if pagination.page + 2 < pagination.pages else pagination.pages %}
+                  
+                  {% for page_num in range(start_page, end_page + 1) %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                      <a class="page-link" href="{{ url_for('messages.list_messages', q=query, role=role, page=page_num, per_page=pagination.per_page, gencom='true' if show_gencom else 'false') }}">
+                        {{ page_num }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                  
+                  {% if pagination.page < pagination.pages %}
+                    <li class="page-item">
+                      <a class="page-link" href="{{ url_for('messages.list_messages', q=query, role=role, page=pagination.page+1, per_page=pagination.per_page, gencom='true' if show_gencom else 'false') }}">
+                        Next
+                      </a>
+                    </li>
+                  {% else %}
+                    <li class="page-item disabled">
+                      <span class="page-link">Next</span>
+                    </li>
+                  {% endif %}
+                </ul>
+              </nav>
+            {% endif %}
+          {% else %}
+            <div class="alert alert-info">
+              {% if query %}
+                No messages found matching your search criteria.
+              {% else %}
+                No messages found. Try adjusting your search criteria.
+              {% endif %}
+            </div>
+          {% endif %}
+          
+          <!-- Color Key -->
+          <div class="color-key mt-4">
+            <h5>Message Role Color Key</h5>
+            <span class="role-user">User</span>
+            <span class="role-assistant">Assistant</span>
+            <span class="role-system">System</span>
+            <span class="role-tool">Tool</span>
+            <span class="role-unknown">Unknown</span>
+          </div>
         </div>
       </div>
     </div>
-    <div class="card-body">
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle-fill"></i> 
-        Messages will be displayed here. This is a placeholder template while the feature is being implemented.
-      </div>
-      
-      <div class="list-group">
-        <!-- Sample message items (placeholders) -->
-        <a href="#" class="list-group-item list-group-item-action">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">Sample Message 1</h5>
-            <small class="text-muted">3 days ago</small>
-          </div>
-          <p class="mb-1">This is a sample message that would be displayed in the list of messages.</p>
-          <small class="text-muted">From: User • Conversation: Sample Conversation</small>
-        </a>
-        <a href="#" class="list-group-item list-group-item-action">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">Sample Message 2</h5>
-            <small class="text-muted">2 days ago</small>
-          </div>
-          <p class="mb-1">Another sample message with different content to showcase the layout.</p>
-          <small class="text-muted">From: Assistant • Conversation: Sample Conversation</small>
-        </a>
-        <a href="#" class="list-group-item list-group-item-action">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">Sample Message 3</h5>
-            <small class="text-muted">1 day ago</small>
-          </div>
-          <p class="mb-1">Yet another sample message showcasing how the list would look with multiple items.</p>
-          <small class="text-muted">From: User • Conversation: Another Conversation</small>
-        </a>
-      </div>
-      
-      <!-- Pagination -->
-      <nav aria-label="Message pagination" class="mt-4">
-        <ul class="pagination justify-content-center">
-          <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
-          </li>
-          <li class="page-item active" aria-current="page">
-            <a class="page-link" href="#">1</a>
-          </li>
-          <li class="page-item"><a class="page-link" href="#">2</a></li>
-          <li class="page-item"><a class="page-link" href="#">3</a></li>
-          <li class="page-item">
-            <a class="page-link" href="#">Next</a>
-          </li>
-        </ul>
-      </nav>
-    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle Gencom toggle form submission
+    const gencomToggle = document.getElementById('gencomToggle');
+    if (gencomToggle) {
+      gencomToggle.addEventListener('change', function() {
+        // Submit the form when the toggle changes
+        this.form.submit();
+      });
+    }
+    
+    // Initialize all gencom triggers
+    document.querySelectorAll('.gencom-trigger').forEach(function(trigger) {
+      trigger.addEventListener('click', function() {
+        this.classList.toggle('collapsed');
+      });
+    });
+    
+    // Advanced search toggle
+    const advancedSearchToggle = document.getElementById('advancedSearchToggle');
+    const advancedSearchOptions = document.getElementById('advancedSearchOptions');
+    
+    if (advancedSearchToggle && advancedSearchOptions) {
+      advancedSearchToggle.addEventListener('click', function() {
+        if (advancedSearchOptions.style.display === 'none') {
+          advancedSearchOptions.style.display = 'block';
+          advancedSearchToggle.innerHTML = '<i class="fas fa-times"></i> Basic';
+        } else {
+          advancedSearchOptions.style.display = 'none';
+          advancedSearchToggle.innerHTML = '<i class="fas fa-cog"></i> Advanced';
+        }
+      });
+    }
+  });
+</script>
 {% endblock %}

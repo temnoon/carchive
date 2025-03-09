@@ -1,0 +1,116 @@
+{% extends "layout.html" %}
+
+{% block title %}Generate AI Comment{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.index') }}">Gencom</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Generate Comment</li>
+        </ol>
+    </nav>
+
+    <h1>Generate AI Comment</h1>
+    <p class="lead">Generate an AI comment for a specific content item.</p>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('gencom.generate') }}">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="target_type" class="form-label">Target Type</label>
+                        <select class="form-select" id="target_type" name="target_type" required>
+                            <option value="" disabled {% if not target_type %}selected{% endif %}>Select Target Type</option>
+                            <option value="message" {% if target_type == 'message' %}selected{% endif %}>Message</option>
+                            <option value="conversation" {% if target_type == 'conversation' %}selected{% endif %}>Conversation</option>
+                            <option value="chunk" {% if target_type == 'chunk' %}selected{% endif %}>Chunk</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="target_id" class="form-label">Target ID</label>
+                        <input type="text" class="form-control" id="target_id" name="target_id" value="{{ target_id or '' }}" required placeholder="UUID of the target item">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="output_type" class="form-label">Output Type</label>
+                        <select class="form-select" id="output_type" name="output_type">
+                            {% for ot in output_types %}
+                            <option value="{{ ot.id }}" {% if output_type == ot.id %}selected{% endif %}>{{ ot.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" id="output_description"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="provider" class="form-label">Provider</label>
+                        <select class="form-select" id="provider" name="provider">
+                            {% for provider in providers %}
+                            <option value="{{ provider }}">{{ provider }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="prompt_template" class="form-label">Custom Prompt Template (optional)</label>
+                    <textarea class="form-control" id="prompt_template" name="prompt_template" rows="4" placeholder="Enter a custom prompt template. Use {content} as a placeholder for the target content."></textarea>
+                    <div class="form-text">If not provided, a default prompt template for the selected output type will be used.</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="max_words" class="form-label">Max Words (optional)</label>
+                        <input type="number" class="form-control" id="max_words" name="max_words" min="1" placeholder="Limit output word count">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="override" name="override">
+                            <label class="form-check-label" for="override">
+                                Override existing output if it exists
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="generate_embedding" name="generate_embedding">
+                            <label class="form-check-label" for="generate_embedding">
+                                Generate embedding for output
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('gencom.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Generate Comment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update output type description when changed
+    document.addEventListener('DOMContentLoaded', function() {
+        const outputTypeSelect = document.getElementById('output_type');
+        const outputDescription = document.getElementById('output_description');
+        
+        // Define descriptions for each output type
+        const descriptions = {
+            {% for ot in output_types %}
+            "{{ ot.id }}": "{{ ot.description }}",
+            {% endfor %}
+        };
+        
+        // Update description initially
+        outputDescription.textContent = descriptions[outputTypeSelect.value];
+        
+        // Update description when selection changes
+        outputTypeSelect.addEventListener('change', function() {
+            outputDescription.textContent = descriptions[this.value];
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'layout.html' %}
+
+{% block title %}Rendering{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Rendering Options</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Conversation Rendering</h2>
+        </div>
+        <div class="card-body">
+            <p>You can render any conversation in HTML or PDF format.</p>
+            <p>To render a conversation, navigate to the conversation view and use the "Render" button.</p>
+            <a href="{{ url_for('conversations.list_conversations') }}" class="btn btn-primary">Browse Conversations</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Collection Rendering</h2>
+        </div>
+        <div class="card-body">
+            <p>You can render any collection in HTML or PDF format.</p>
+            <p>To render a collection, navigate to the collection view and use the "Render" button.</p>
+            <a href="{{ url_for('collections.list_collections') }}" class="btn btn-primary">Browse Collections</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Combined Collections</h2>
+        </div>
+        <div class="card-body">
+            <p>You can render multiple collections together in a single document.</p>
+            <a href="{{ url_for('render.render_combined') }}" class="btn btn-primary">Combine Collections</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Media Messages</h2>
+        </div>
+        <div class="card-body">
+            <p>You can render messages with media attachments.</p>
+            <form action="{{ url_for('render.render_media_messages') }}" method="get" class="mt-3">
+                <div class="mb-3">
+                    <label for="mediaType" class="form-label">Media Type</label>
+                    <select id="mediaType" name="media_type" class="form-select">
+                        <option value="image">Image</option>
+                        <option value="pdf">PDF</option>
+                        <option value="audio">Audio</option>
+                        <option value="video">Video</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="limit" class="form-label">Number of messages to display</label>
+                    <input type="number" id="limit" name="limit" value="10" min="1" max="100" class="form-control">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="template" class="form-label">Template</label>
+                    <select id="template" name="template" class="form-select">
+                        {% for template in templates %}
+                        <option value="{{ template }}" {% if template == 'default' %}selected{% endif %}>{{ template }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="format" class="form-label">Format</label>
+                    <select id="format" name="format" class="form-select">
+                        {% for format in formats %}
+                        <option value="{{ format }}">{{ format.upper() }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not pdf_available %}
+                    <small class="text-muted">PDF format requires WeasyPrint to be installed.</small>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="includeMetadata" name="include_metadata" value="true" checked>
+                    <label class="form-check-label" for="includeMetadata">Include Metadata</label>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="download" name="download" value="true">
+                    <label class="form-check-label" for="download">Download File</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Render Media Messages</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Available Templates</h2>
+        </div>
+        <div class="card-body">
+            <p>The following templates are available for rendering:</p>
+            <ul class="list-group">
+                {% for template in templates %}
+                <li class="list-group-item">{{ template }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Available Formats</h2>
+        </div>
+        <div class="card-body">
+            <p>The following output formats are available:</p>
+            <ul class="list-group">
+                {% for format in formats %}
+                <li class="list-group-item">{{ format.upper() }}</li>
+                {% endfor %}
+            </ul>
+            {% if not pdf_available %}
+            <div class="alert alert-warning mt-3">
+                <p><strong>Note:</strong> PDF format requires WeasyPrint to be installed.</p>
+                <p>Follow the installation instructions at: <a href="https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation" target="_blank">WeasyPrint Documentation</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

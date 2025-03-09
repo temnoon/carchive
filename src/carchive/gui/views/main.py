@@ -1,5 +1,5 @@
 """
-Main routes for the carchive2 GUI.
+Main routes for the carchive GUI.
 """
 
 import requests

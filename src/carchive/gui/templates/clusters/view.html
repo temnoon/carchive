@@ -1,0 +1,332 @@
+{% extends 'layout.html' %}
+
+{% block title %}View Cluster | {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .sample-text {
+        max-height: 150px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 0.9em;
+        margin-bottom: 15px;
+    }
+    
+    #visualization-container {
+        min-height: 400px;
+        position: relative;
+        margin: 20px 0;
+    }
+    
+    .point {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #4287f5;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        transition: width 0.2s, height 0.2s;
+    }
+    
+    .point:hover {
+        width: 14px;
+        height: 14px;
+        z-index: 100;
+    }
+    
+    .point-tooltip {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8em;
+        max-width: 250px;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ cluster.name }}</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="{{ url_for('clusters.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Clusters
+            </a>
+            
+            {% if not show_viz %}
+            <a href="{{ url_for('clusters.view', collection_id=cluster.id, viz='true') }}" class="btn btn-primary">
+                <i class="fas fa-chart-scatter"></i> Show Visualization
+            </a>
+            {% else %}
+            <a href="{{ url_for('clusters.view', collection_id=cluster.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> Hide Visualization
+            </a>
+            {% endif %}
+            
+            <form method="post" action="{{ url_for('clusters.delete', collection_id=cluster.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this cluster?');">
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Delete Cluster
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Cluster Details -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Cluster Details</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th>ID</th>
+                                <td>{{ cluster.id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Created</th>
+                                <td>{{ cluster.created_at|datetime }}</td>
+                            </tr>
+                            <tr>
+                                <th>Item Count</th>
+                                <td>{{ cluster.item_count }}</td>
+                            </tr>
+                            <tr>
+                                <th>Cluster ID</th>
+                                <td>{{ cluster.cluster_meta.cluster_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Item Type</th>
+                                <td>{{ cluster.cluster_meta.item_type }}</td>
+                            </tr>
+                            {% if cluster.cluster_meta.topic %}
+                            <tr>
+                                <th>Topic</th>
+                                <td>{{ cluster.cluster_meta.topic.topic }}</td>
+                            </tr>
+                            <tr>
+                                <th>Keywords</th>
+                                <td>
+                                    {% for keyword in cluster.cluster_meta.topic.keywords %}
+                                    <span class="badge bg-secondary">{{ keyword }}</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Confidence</th>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-{{ 'success' if cluster.cluster_meta.topic.confidence > 0.7 else 'warning' if cluster.cluster_meta.topic.confidence > 0.4 else 'danger' }}" 
+                                             role="progressbar" 
+                                             style="width: {{ (cluster.cluster_meta.topic.confidence * 100)|round }}%;" 
+                                             aria-valuenow="{{ (cluster.cluster_meta.topic.confidence * 100)|round }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ (cluster.cluster_meta.topic.confidence * 100)|round }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sample Texts -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Sample Texts</h5>
+                </div>
+                <div class="card-body">
+                    {% if cluster.sample_texts %}
+                        {% for sample in cluster.sample_texts %}
+                            <div class="sample-text">{{ sample }}</div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No sample texts available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if show_viz and viz_data %}
+    <!-- Visualization -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Cluster Visualization</h5>
+                </div>
+                <div class="card-body">
+                    <div id="visualization-container" class="border">
+                        <div id="point-tooltip" class="point-tooltip"></div>
+                        <!-- Points will be added here via JavaScript -->
+                    </div>
+                    
+                    <div class="text-center mt-2">
+                        <p class="text-muted">
+                            PCA Component 1 ({{ (viz_data.metadata.explained_variance[0] * 100)|round }}% variance) vs. 
+                            PCA Component 2 ({{ (viz_data.metadata.explained_variance[1] * 100)|round }}% variance)
+                        </p>
+                        <p>Showing {{ viz_data.visualization_data|length }} data points</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Cluster Items -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Cluster Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Item ID</th>
+                                    <th>Message ID</th>
+                                    <th>Content Preview</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cluster.items %}
+                                <tr>
+                                    <td>{{ item.id|truncate(8, true, '') }}</td>
+                                    <td>
+                                        {% if item.message %}
+                                        {{ item.message.id|truncate(8, true, '') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.message %}
+                                        {{ item.message.content_preview|truncate(100) }}
+                                        {% else %}
+                                        <span class="text-muted">No content available</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.message %}
+                                        <a href="{{ url_for('messages.view_message', message_id=item.message.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View Message
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No items available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if cluster.item_count > 20 %}
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i> Showing first 20 items out of {{ cluster.item_count }} total items.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if show_viz and viz_data %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('visualization-container');
+        const tooltip = document.getElementById('point-tooltip');
+        
+        // Get container dimensions
+        const width = container.clientWidth;
+        const height = 400; // Fixed height
+        container.style.height = height + 'px';
+        
+        // Find min/max for normalization
+        const points = {{ viz_data.visualization_data|tojson }};
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        
+        points.forEach(point => {
+            const x = point.coordinates.x;
+            const y = point.coordinates.y;
+            
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+        });
+        
+        // Add some padding
+        const paddingX = (maxX - minX) * 0.1;
+        const paddingY = (maxY - minY) * 0.1;
+        minX -= paddingX;
+        maxX += paddingX;
+        minY -= paddingY;
+        maxY += paddingY;
+        
+        // Create points
+        points.forEach(point => {
+            // Normalize coordinates to container size
+            const normalizedX = (point.coordinates.x - minX) / (maxX - minX);
+            const normalizedY = (point.coordinates.y - minY) / (maxY - minY);
+            
+            // Create point element
+            const pointElement = document.createElement('div');
+            pointElement.className = 'point';
+            pointElement.style.left = (normalizedX * width) + 'px';
+            pointElement.style.top = (normalizedY * height) + 'px';
+            
+            // Set tooltip content
+            pointElement.setAttribute('data-content', point.content_preview || 'No content preview available');
+            
+            // Add event listeners for tooltip
+            pointElement.addEventListener('mouseenter', function(e) {
+                tooltip.textContent = this.getAttribute('data-content');
+                tooltip.style.left = (e.pageX - container.offsetLeft + 10) + 'px';
+                tooltip.style.top = (e.pageY - container.offsetTop - 30) + 'px';
+                tooltip.style.opacity = '1';
+            });
+            
+            pointElement.addEventListener('mouseleave', function() {
+                tooltip.style.opacity = '0';
+            });
+            
+            pointElement.addEventListener('mousemove', function(e) {
+                tooltip.style.left = (e.pageX - container.offsetLeft + 10) + 'px';
+                tooltip.style.top = (e.pageY - container.offsetTop - 30) + 'px';
+            });
+            
+            // Add to container
+            container.appendChild(pointElement);
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

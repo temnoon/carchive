@@ -1,0 +1,96 @@
+{% extends 'layout.html' %}
+
+{% block title %}Analyze Clusters | {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Analyze Optimal Cluster Count</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="{{ url_for('clusters.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Clusters
+            </a>
+        </div>
+    </div>
+    
+    {% if show_results %}
+    <!-- Analysis Results -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Analysis Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        <h4 class="alert-heading">Optimal Cluster Count: {{ analysis.optimal_clusters }}</h4>
+                        <p>Based on silhouette score analysis, the optimal number of clusters for your data is <strong>{{ analysis.optimal_clusters }}</strong>.</p>
+                    </div>
+                    
+                    {% if analysis.visualization_filename %}
+                    <div class="text-center mt-4">
+                        <h6>Visualization</h6>
+                        <img src="{{ url_for('clusters.get_visualization', filepath=analysis.visualization_filename) }}" class="img-fluid border" alt="Cluster Analysis Visualization">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4 text-center">
+                        <a href="{{ url_for('clusters.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Clusters with Optimal Count
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Analysis Form -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Analysis Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('clusters.analyze') }}">
+                        <div class="mb-3">
+                            <label for="min_clusters" class="form-label">Minimum Cluster Count</label>
+                            <input type="number" id="min_clusters" name="min_clusters" class="form-control" value="2" min="2" max="50" required>
+                            <div class="form-text">The minimum number of clusters to test.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="max_clusters" class="form-label">Maximum Cluster Count</label>
+                            <input type="number" id="max_clusters" name="max_clusters" class="form-control" value="20" min="3" max="100" required>
+                            <div class="form-text">The maximum number of clusters to test.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="step" class="form-label">Step Size</label>
+                            <input type="number" id="step" name="step" class="form-control" value="1" min="1" max="5" required>
+                            <div class="form-text">The step size between cluster counts to test.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="limit" class="form-label">Limit Embeddings</label>
+                            <input type="number" id="limit" name="limit" class="form-control" value="1000" min="100">
+                            <div class="form-text">Limit the number of embeddings to process (blank for no limit). Using 1000-2000 is recommended for faster analysis.</div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> This analysis may take a while to complete, especially with a large range of cluster counts. Please be patient.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('clusters.index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Run Analysis</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

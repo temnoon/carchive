@@ -1,148 +1,233 @@
 {% extends 'layout.html' %}
 
-{% block title %}View Message{% endblock %}
+{% block title %}View Message - {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="container">
-  <div class="row">
-    <div class="col-md-12">
-      <nav aria-label="breadcrumb" class="my-3">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('messages.list_messages') }}">Messages</a></li>
-          <li class="breadcrumb-item active" aria-current="page">View Message</li>
-        </ol>
-      </nav>
-    </div>
-  </div>
-  
-  <div class="card mb-4">
-    <div class="card-header">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Message Details</h5>
-        <div>
-          <a href="#" class="btn btn-outline-primary">View Conversation</a>
-        </div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle-fill"></i> 
-        This is a placeholder template for message viewing while the feature is being implemented.
-      </div>
-      
-      <div class="row">
-        <div class="col-md-8">
-          <!-- Message Content -->
-          <div class="card mb-3">
-            <div class="card-header">
-              <div class="d-flex justify-content-between align-items-center">
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">Message Details</h2>
                 <div>
-                  <span class="badge bg-primary me-2">User</span>
-                  <span class="text-muted">February 25, 2025 at 10:30 AM</span>
+                    <a href="{{ url_for('messages.list_messages') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Messages
+                    </a>
+                    {% if message and message.conversation_id %}
+                    <a href="{{ url_for('conversations.view_conversation', conversation_id=message.conversation_id) }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-comments"></i> View Conversation
+                    </a>
+                    {% endif %}
                 </div>
-                <div>
-                  <span class="badge bg-secondary">ID: msg_12345</span>
-                </div>
-              </div>
             </div>
             <div class="card-body">
-              <p>This is a sample message content. It would include the text of the message that was sent by the user or received from the assistant.</p>
-              <p>In a real implementation, this would show actual content from the database, including formatting and potentially rendered markdown.</p>
-            </div>
-          </div>
-          
-          <!-- Attached Media -->
-          <div class="card">
-            <div class="card-header">
-              <h6 class="mb-0">Attached Media</h6>
-            </div>
-            <div class="card-body">
-              <div class="row row-cols-1 row-cols-md-3 g-4">
-                <div class="col">
-                  <div class="card h-100">
-                    <div class="card-body text-center">
-                      <i class="bi bi-image" style="font-size: 2rem;"></i>
-                      <h6 class="card-title mt-2">sample_image.jpg</h6>
-                      <p class="card-text text-muted">image/jpeg • 256 KB</p>
+                {% if api_error %}
+                    <div class="alert alert-warning mb-4">
+                        <h4 class="alert-heading">API Connection Issue</h4>
+                        <p>{{ api_error }}</p>
+                        <hr>
+                        <p class="mb-0">Please ensure the API server is running at port 8000. You can try restarting the servers with <code>poetry run carchive server start-all</code></p>
                     </div>
-                    <div class="card-footer text-center">
-                      <a href="#" class="btn btn-sm btn-outline-primary">View</a>
+                {% endif %}
+                
+                {% if message %}
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="gencomToggle" {% if show_gencom %}checked{% endif %}>
+                        <label class="form-check-label" for="gencomToggle">Show AI Analysis (gencom)</label>
                     </div>
-                  </div>
-                </div>
-              </div>
+                    
+                    <div class="message-metadata mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Role:</strong> {{ message.role|title }}</p>
+                                <p><strong>Created:</strong> {{ message.created_at|datetime if message.created_at else 'Unknown' }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Conversation:</strong> 
+                                    {% if message.conversation_title %}
+                                        <a href="{{ url_for('conversations.view_conversation', conversation_id=message.conversation_id) }}">
+                                            {{ message.conversation_title }}
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('conversations.view_conversation', conversation_id=message.conversation_id) }}">
+                                            {{ message.conversation_id }}
+                                        </a>
+                                    {% endif %}
+                                </p>
+                                <p><strong>Message ID:</strong> {{ message.id }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Message Display -->
+                    <div class="message-container mb-4 message-{{ message.role }}">
+                        <div class="message-header d-flex justify-content-between align-items-center py-2 px-3 rounded-top 
+                            {% if message.role == 'user' %}bg-primary text-white
+                            {% elif message.role == 'assistant' %}bg-secondary text-white
+                            {% elif message.role == 'system' %}bg-secondary text-white
+                            {% elif message.role == 'tool' %}bg-warning text-dark
+                            {% else %}bg-light text-dark{% endif %}">
+                            <div>
+                                <strong>{{ message.role|title }}</strong>
+                            </div>
+                            <div>
+                                <small>{{ message.created_at|datetime if message.created_at is defined else 'Unknown' }}</small>
+                            </div>
+                        </div>
+                        
+                        {% if show_gencom and message.has_gencom and message.gencom %}
+                            <div class="gencom-outer border border-bottom-0 border-top-0 px-3 py-1">
+                                <div class="gencom-trigger collapsed" data-bs-toggle="collapse" data-bs-target="#gencom-{{ message.id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                    <span>AI Analysis (gencom) available</span>
+                                </div>
+                                <div class="collapse" id="gencom-{{ message.id }}">
+                                    <div class="gencom-content">
+                                        {% for output in message.gencom %}
+                                            <div class="gencom-field">
+                                                <div class="gencom-field-label">{{ output.output_type|replace('_', ' ')|title }}</div>
+                                                <div class="gencom-field-value">{{ output.content|safe }}</div>
+                                            </div>
+                                            {% if not loop.last %}<hr>{% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="message-content p-3 border border-top-0 rounded-bottom {% if show_gencom and message.has_gencom and message.gencom %}border-top-radius-0{% endif %}">
+                            {% if message.role == 'tool' and message.content|trim|first == '{' and message.content|trim|last == '}' %}
+                                <pre class="tool-json">{{ message.content|trim }}</pre>
+                            {% else %}
+                                {{ message.content|safe }}
+                            {% endif %}
+                            
+                            {% if message.media_items %}
+                                <div class="message-media mt-3">
+                                    <h5>Media:</h5>
+                                    <div class="row">
+                                        {% for media in message.media_items %}
+                                            <div class="col-md-3 mb-3">
+                                                <a href="{{ url_for('media.view_media', media_id=media.id) }}" class="media-thumbnail">
+                                                    <img src="{{ url_for('media.thumbnail', media_id=media.id) }}" alt="{{ media.filename }}" class="img-thumbnail">
+                                                    <div class="mt-1 small text-truncate">{{ media.filename }}</div>
+                                                </a>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Context (Previous and Next Messages) -->
+                    {% if context %}
+                        <div class="message-context mt-4">
+                            <h4>Message Context</h4>
+                            
+                            {% if context.previous_messages %}
+                                <h5 class="mt-3">Previous Messages</h5>
+                                {% for prev_msg in context.previous_messages %}
+                                    <div class="message-container mb-3 message-{{ prev_msg.role }} message-context-item">
+                                        <div class="message-header d-flex justify-content-between align-items-center py-1 px-3 rounded-top 
+                                            {% if prev_msg.role == 'user' %}bg-primary text-white
+                                            {% elif prev_msg.role == 'assistant' %}bg-secondary text-white
+                                            {% elif prev_msg.role == 'system' %}bg-secondary text-white
+                                            {% elif prev_msg.role == 'tool' %}bg-warning text-dark
+                                            {% else %}bg-light text-dark{% endif %}">
+                                            <div>
+                                                <small><strong>{{ prev_msg.role|title }}</strong></small>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <small>{{ prev_msg.created_at|datetime if prev_msg.created_at is defined else 'Unknown' }}</small>
+                                                <a href="{{ url_for('messages.view_message', message_id=prev_msg.id) }}" class="btn btn-sm btn-light ms-2" title="View message">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="message-content p-2 border border-top-0 rounded-bottom">
+                                            <div class="message-preview">
+                                                {{ prev_msg.content|truncate(200)|safe }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            {% if context.next_messages %}
+                                <h5 class="mt-3">Next Messages</h5>
+                                {% for next_msg in context.next_messages %}
+                                    <div class="message-container mb-3 message-{{ next_msg.role }} message-context-item">
+                                        <div class="message-header d-flex justify-content-between align-items-center py-1 px-3 rounded-top 
+                                            {% if next_msg.role == 'user' %}bg-primary text-white
+                                            {% elif next_msg.role == 'assistant' %}bg-secondary text-white
+                                            {% elif next_msg.role == 'system' %}bg-secondary text-white
+                                            {% elif next_msg.role == 'tool' %}bg-warning text-dark
+                                            {% else %}bg-light text-dark{% endif %}">
+                                            <div>
+                                                <small><strong>{{ next_msg.role|title }}</strong></small>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <small>{{ next_msg.created_at|datetime if next_msg.created_at is defined else 'Unknown' }}</small>
+                                                <a href="{{ url_for('messages.view_message', message_id=next_msg.id) }}" class="btn btn-sm btn-light ms-2" title="View message">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="message-content p-2 border border-top-0 rounded-bottom">
+                                            <div class="message-preview">
+                                                {{ next_msg.content|truncate(200)|safe }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="alert alert-info">
+                        Message not found or API error occurred.
+                    </div>
+                {% endif %}
             </div>
-          </div>
         </div>
-        
-        <div class="col-md-4">
-          <!-- Metadata -->
-          <div class="card">
-            <div class="card-header">
-              <h6 class="mb-0">Message Metadata</h6>
-            </div>
-            <div class="card-body">
-              <table class="table table-sm">
-                <tbody>
-                  <tr>
-                    <th scope="row">ID</th>
-                    <td>msg_12345</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">From</th>
-                    <td>User</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Conversation</th>
-                    <td><a href="#">Sample Conversation</a></td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Timestamp</th>
-                    <td>February 25, 2025 10:30 AM</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Role</th>
-                    <td>user</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          <!-- Context -->
-          <div class="card mt-3">
-            <div class="card-header">
-              <h6 class="mb-0">Conversation Context</h6>
-            </div>
-            <div class="card-body">
-              <div class="list-group">
-                <a href="#" class="list-group-item list-group-item-action">
-                  <div class="d-flex w-100 justify-content-between">
-                    <span class="badge bg-secondary">Assistant</span>
-                    <small class="text-muted">10:29 AM</small>
-                  </div>
-                  <p class="mb-1 text-truncate">Previous message from the conversation...</p>
-                </a>
-                <div class="list-group-item active">
-                  <div class="d-flex w-100 justify-content-between">
-                    <span class="badge bg-light text-dark">User</span>
-                    <small>10:30 AM</small>
-                  </div>
-                  <p class="mb-1 text-truncate">Current message being viewed...</p>
-                </div>
-                <a href="#" class="list-group-item list-group-item-action">
-                  <div class="d-flex w-100 justify-content-between">
-                    <span class="badge bg-secondary">Assistant</span>
-                    <small class="text-muted">10:31 AM</small>
-                  </div>
-                  <p class="mb-1 text-truncate">Next message in the conversation...</p>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
 </div>
+
+<style>
+.message-preview {
+    max-height: 150px;
+    overflow-y: auto;
+}
+.message-context-item {
+    margin-left: 2rem;
+    margin-right: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle Gencom toggle
+        const gencomToggle = document.getElementById('gencomToggle');
+        if (gencomToggle) {
+            gencomToggle.addEventListener('change', function() {
+                // Get current URL and params
+                const url = new URL(window.location.href);
+                // Update gencom parameter
+                url.searchParams.set('gencom', this.checked ? 'true' : 'false');
+                // Navigate to the new URL
+                window.location.href = url.toString();
+            });
+        }
+        
+        // Initialize all gencom triggers
+        document.querySelectorAll('.gencom-trigger').forEach(function(trigger) {
+            trigger.addEventListener('click', function() {
+                this.classList.toggle('collapsed');
+            });
+        });
+    });
+</script>
 {% endblock %}

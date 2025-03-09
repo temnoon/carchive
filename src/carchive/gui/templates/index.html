@@ -55,7 +55,8 @@
             <div class="card-body text-center">
                 <h4 class="display-4">{{ stats.messages|default('0') }}</h4>
                 <p>Total messages in database</p>
-                <a href="{{ url_for('messages.list_messages') }}" class="btn btn-primary">Browse</a>
+                <a href="{{ url_for('messages.real_list') }}" class="btn btn-primary">Browse Messages</a>
+                <a href="{{ url_for('messages.ultra_simple_list') }}" class="btn btn-outline-secondary btn-sm mt-2">Simple Message View</a>
             </div>
         </div>
     </div>

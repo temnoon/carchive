@@ -166,7 +166,8 @@ def get_conversation(conversation_id: str, session: Session):
                         'file_path': media.file_path,
                         'media_type': media.media_type,
                         'created_at': media.created_at.isoformat() if media.created_at else None,
-                        'file_name': media.file_name,
+                        'file_name': media.original_file_name,  # Use original_file_name for backward compatibility
+                        'original_file_name': media.original_file_name,  # Explicitly include both fields
                         'original_file_id': media.original_file_id,
                         'is_generated': media.is_generated
                     } for media in media_by_message.get(str(msg.id), [])

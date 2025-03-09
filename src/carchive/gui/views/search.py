@@ -1,5 +1,5 @@
 """
-Search routes for the carchive2 GUI.
+Search routes for the carchive GUI.
 """
 
 import requests
@@ -17,7 +17,7 @@ def search_form():
     # Get providers, roles for filters
     try:
         # Get providers
-        api_url = current_app.config.get('API_URL', 'http://localhost:5000')
+        api_url = current_app.config.get('API_URL', 'http://localhost:8000')
         providers_response = requests.get(f"{api_url}/api/providers")
         if providers_response.status_code == 200:
             providers = providers_response.json()
@@ -77,7 +77,7 @@ def search_results():
         days = 365
     
     # Determine which endpoint to use based on semantic search toggle
-    api_url = current_app.config.get('API_URL', 'http://localhost:5000')
+    api_url = current_app.config.get('API_URL', 'http://localhost:8000')
     
     try:
         if semantic:
@@ -205,7 +205,7 @@ def save_search():
         }
         
         # Make API request to save the search
-        api_url = current_app.config.get('API_URL', 'http://localhost:5000')
+        api_url = current_app.config.get('API_URL', 'http://localhost:8000')
         response = requests.post(
             f"{api_url}/api/search/save",
             json={

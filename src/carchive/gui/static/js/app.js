@@ -1,5 +1,5 @@
 /**
- * Main JavaScript for carchive2 Explorer
+ * Main JavaScript for Carchive Explorer
  */
 
 document.addEventListener('DOMContentLoaded', function() {

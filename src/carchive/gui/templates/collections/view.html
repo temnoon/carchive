@@ -13,9 +13,18 @@
             <a href="{{ url_for('collections.edit_collection', collection_id=collection.id) }}" class="btn btn-outline-primary">
                 <i class="fa fa-edit"></i> Edit
             </a>
-            <a href="{{ url_for('collections.render_collection', collection_id=collection.id) }}" class="btn btn-outline-secondary" target="_blank">
-                <i class="fa fa-file-code"></i> Render HTML
-            </a>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa fa-file-export"></i> Render
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('render.render_collection', collection_name=collection.name, format='html') }}" target="_blank">HTML</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('render.render_collection', collection_name=collection.name, format='html', include_metadata='true') }}" target="_blank">HTML with Metadata</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('render.render_collection', collection_name=collection.name, format='pdf', download='true') }}">Download as PDF</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('render.render_collection', collection_name=collection.name, format='html', download='true') }}">Download as HTML</a></li>
+                </ul>
+            </div>
             <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
                 <i class="fa fa-trash"></i> Delete
             </button>

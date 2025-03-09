@@ -1,0 +1,122 @@
+{% extends "layout.html" %}
+
+{% block title %}Purge AI Comments{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.index') }}">Gencom</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Purge Comments</li>
+        </ol>
+    </nav>
+
+    <h1>Purge AI Comments</h1>
+    <p class="lead">Delete generated AI comments matching specific criteria.</p>
+
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> This operation will permanently delete selected AI comments. This action cannot be undone.
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('gencom.purge') }}" onsubmit="return confirm('Are you sure you want to delete these comments? This action cannot be undone.');">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="output_type" class="form-label">Output Type to Purge</label>
+                        <select class="form-select" id="output_type" name="output_type" required>
+                            {% for ot in output_types %}
+                            <option value="{{ ot.id }}" {% if output_type == ot.id %}selected{% endif %}>{{ ot.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" id="output_description"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="target_type" class="form-label">Target Type</label>
+                        <select class="form-select" id="target_type" name="target_type">
+                            <option value="message">Messages</option>
+                            <option value="conversation">Conversations</option>
+                            <option value="chunk">Chunks</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="conversation_id" class="form-label">Conversation ID (optional)</label>
+                        <input type="text" class="form-control" id="conversation_id" name="conversation_id" placeholder="Limit to a specific conversation">
+                        <div class="form-text">Leave blank to purge across all conversations</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="source_provider" class="form-label">Source Provider (optional)</label>
+                        <select class="form-select" id="source_provider" name="source_provider">
+                            <option value="">Any Provider</option>
+                            {% for provider_id, provider_name in source_providers %}
+                            <option value="{{ provider_name }}">{{ provider_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6" id="role_container">
+                        <label for="role" class="form-label">Message Role (optional, for messages only)</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="">Any Role</option>
+                            {% for role in message_roles %}
+                            <option value="{{ role }}">{{ role }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('gencom.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-danger">Purge Comments</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update output type description when changed
+    document.addEventListener('DOMContentLoaded', function() {
+        const outputTypeSelect = document.getElementById('output_type');
+        const outputDescription = document.getElementById('output_description');
+        const targetTypeSelect = document.getElementById('target_type');
+        const roleContainer = document.getElementById('role_container');
+        
+        // Define descriptions for each output type
+        const descriptions = {
+            {% for ot in output_types %}
+            "{{ ot.id }}": "{{ ot.description }}",
+            {% endfor %}
+        };
+        
+        // Update description initially
+        outputDescription.textContent = descriptions[outputTypeSelect.value];
+        
+        // Update description when selection changes
+        outputTypeSelect.addEventListener('change', function() {
+            outputDescription.textContent = descriptions[this.value];
+        });
+        
+        // Show/hide role selection based on target type
+        targetTypeSelect.addEventListener('change', function() {
+            if (this.value === 'message') {
+                roleContainer.style.display = 'block';
+            } else {
+                roleContainer.style.display = 'none';
+                document.getElementById('role').value = '';
+            }
+        });
+        
+        // Initialize role container visibility
+        if (targetTypeSelect.value !== 'message') {
+            roleContainer.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

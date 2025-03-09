@@ -3,6 +3,7 @@ Views for collection management.
 """
 
 import json
+import logging
 import requests
 from uuid import UUID
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
@@ -17,10 +18,18 @@ def list_collections():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     
+    # Get API URLs with fallbacks
+    api_url = current_app.config.get('API_URL', 'http://localhost:8000')
+    api_base_url = current_app.config.get('API_BASE_URL', f"{api_url}/api")
+    
+    # Log the API URL for debugging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Using API base URL: {api_base_url}")
+    
     # Fetch collections from API
     try:
         response = requests.get(
-            f"{current_app.config['API_BASE_URL']}/collections/",
+            f"{api_base_url}/collections/",
             params={'page': page, 'per_page': per_page}
         )
         response.raise_for_status()
@@ -32,6 +41,7 @@ def list_collections():
             pagination=data['pagination']
         )
     except requests.RequestException as e:
+        logger.error(f"Error fetching collections: {str(e)}")
         flash(f"Error fetching collections: {str(e)}", "danger")
         return render_template('collections/list.html', collections=[])
 
@@ -43,8 +53,12 @@ def view_collection(collection_id):
         # Validate UUID format
         UUID(collection_id)
         
+        # Get API URLs with fallbacks
+        api_url = current_app.config.get('API_URL', 'http://localhost:8000')
+        api_base_url = current_app.config.get('API_BASE_URL', f"{api_url}/api")
+        
         # Fetch collection from API
-        response = requests.get(f"{current_app.config['API_BASE_URL']}/collections/{collection_id}")
+        response = requests.get(f"{api_base_url}/collections/{collection_id}")
         response.raise_for_status()
         
         collection = response.json()

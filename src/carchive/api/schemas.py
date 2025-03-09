@@ -14,7 +14,8 @@ class MediaBase(BaseModel):
     file_path: str
     media_type: str
     original_file_id: Optional[str] = None
-    file_name: Optional[str] = None
+    original_file_name: Optional[str] = None  # Changed from file_name to match the model
+    file_name: Optional[str] = None  # Keep for backward compatibility
     is_generated: bool = False
     created_at: datetime
 

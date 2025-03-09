@@ -95,7 +95,26 @@ def kill_processes_using_port(port: int) -> List[int]:
 
 def is_server_running(port: int) -> bool:
     """Check if a server is running on the specified port."""
-    return len(get_processes_using_port(port)) > 0
+    # First check if the port is in use with psutil
+    has_process = len(get_processes_using_port(port)) > 0
+    
+    # If process found, also try to connect to verify it's responding
+    if has_process:
+        import socket
+        try:
+            # Create a socket object
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Set a timeout of 1 second
+            s.settimeout(1)
+            # Try to connect to the port
+            result = s.connect_ex(('127.0.0.1', port))
+            s.close()
+            # If result is 0, connection was successful
+            return result == 0
+        except:
+            pass
+    
+    return has_process
 
 
 def get_environment_path(env_type: EnvType) -> Path:
@@ -123,10 +142,35 @@ def get_python_path(env_type: EnvType) -> Path:
     else:
         python_path = env_path / "bin" / "python"
     
+    # First try to find Python 3.10 in the environment
+    python310_path = None
+    if platform.system() == "Windows":
+        if (env_path / "Scripts" / "python3.10.exe").exists():
+            python310_path = env_path / "Scripts" / "python3.10.exe"
+    else:
+        if (env_path / "bin" / "python3.10").exists():
+            python310_path = env_path / "bin" / "python3.10"
+    
+    # If Python 3.10 is found, use it
+    if python310_path is not None:
+        console.print(f"[green]Using Python 3.10 at {python310_path}[/green]")
+        return python310_path
+    
+    # Otherwise, try the default python in the environment
     if not python_path.exists():
         console.print(f"[yellow]Warning: Python executable not found at {python_path}[/yellow]")
         console.print(f"[yellow]Falling back to system Python[/yellow]")
         python_path = Path(sys.executable)
+    
+    # Print warning if not using Python 3.10
+    try:
+        python_version = subprocess.check_output([str(python_path), "-V"], 
+                                                text=True, stderr=subprocess.STDOUT)
+        if "3.10" not in python_version:
+            console.print(f"[yellow]Warning: Using {python_version.strip()}. " +
+                         "This project is designed for Python 3.10.[/yellow]")
+    except Exception:
+        pass
     
     return python_path
 
@@ -203,7 +247,7 @@ CORS(app, resources={r'/*': {'origins': '*', 'methods': ['GET', 'POST', 'PUT', '
 """
         script += f"""
 print(f"Starting API server at http://{host}:{port}")
-app.run(host='{host}', port={port}, debug={str(debug).lower()})
+app.run(host='{host}', port={port}, debug={debug})
 """
     else:  # GUI
         script = f"""
@@ -217,7 +261,7 @@ print(f"Starting GUI server at http://{host}:{port}")
 """
         if api_url:
             script += f'print(f"API URL: {api_url}")\n'
-        script += f"app.run(host='{host}', port={port}, debug={str(debug).lower()})"
+        script += f"app.run(host='{host}', port={port}, debug={debug})"
     
     return script
 
@@ -283,8 +327,25 @@ def start_api(
         f.write(script)
     
     try:
-        # Get Python path
-        python_path = get_python_path(env_type)
+        # Get Python path - prioritize the active environment's Python
+        if "VIRTUAL_ENV" in os.environ:
+            # Use the Python from the active virtual environment
+            console.print(f"[green]Using Python from active virtual environment: {os.environ['VIRTUAL_ENV']}[/green]")
+            if platform.system() == "Windows":
+                python_path = Path(os.environ["VIRTUAL_ENV"]) / "Scripts" / "python.exe"
+            else:
+                python_path = Path(os.environ["VIRTUAL_ENV"]) / "bin" / "python"
+        else:
+            # Fall back to the configured environment
+            python_path = get_python_path(env_type)
+        
+        # Print Python version
+        try:
+            python_version = subprocess.check_output([str(python_path), "-V"], 
+                                               text=True, stderr=subprocess.STDOUT).strip()
+            console.print(f"[green]Using {python_version}[/green]")
+        except Exception as e:
+            console.print(f"[yellow]Could not determine Python version: {e}[/yellow]")
         
         # Run the server
         command = [str(python_path), str(temp_script_path)]
@@ -354,8 +415,25 @@ def start_gui(
         f.write(script)
     
     try:
-        # Get Python path
-        python_path = get_python_path(env_type)
+        # Get Python path - prioritize the active environment's Python
+        if "VIRTUAL_ENV" in os.environ:
+            # Use the Python from the active virtual environment
+            console.print(f"[green]Using Python from active virtual environment: {os.environ['VIRTUAL_ENV']}[/green]")
+            if platform.system() == "Windows":
+                python_path = Path(os.environ["VIRTUAL_ENV"]) / "Scripts" / "python.exe"
+            else:
+                python_path = Path(os.environ["VIRTUAL_ENV"]) / "bin" / "python"
+        else:
+            # Fall back to the configured environment
+            python_path = get_python_path(env_type)
+        
+        # Print Python version
+        try:
+            python_version = subprocess.check_output([str(python_path), "-V"], 
+                                               text=True, stderr=subprocess.STDOUT).strip()
+            console.print(f"[green]Using {python_version}[/green]")
+        except Exception as e:
+            console.print(f"[yellow]Could not determine Python version: {e}[/yellow]")
         
         # Run the server
         command = [str(python_path), str(temp_script_path)]
@@ -430,6 +508,11 @@ def start_all(
     # Short delay to ensure API is up
     time.sleep(2)
     
+    # Verify API started successfully
+    if not is_server_running(api_port):
+        console.print("[red]Error: API server failed to start or is not responding[/red]")
+        return
+    
     # Start GUI server
     console.print("[cyan]Starting GUI server...[/cyan]")
     start_gui(
@@ -442,6 +525,13 @@ def start_all(
         foreground=False
     )
     
+    # Verify GUI started successfully
+    time.sleep(2)
+    if not is_server_running(gui_port):
+        console.print("[red]Error: GUI server failed to start or is not responding[/red]")
+        return
+    
+    # Both servers started successfully
     console.print(f"\n[green]Servers started successfully![/green]")
     console.print(f"[green]API server: http://{api_host}:{api_port}[/green]")
     console.print(f"[green]GUI server: http://{gui_host}:{gui_port}[/green]")
@@ -527,9 +617,9 @@ def restart(
 def create_run_script(
     server_type: ServerType = typer.Option(ServerType.BOTH, "--type", "-t", help="Server type to create script for."),
     api_host: str = typer.Option("127.0.0.1", "--api-host", help="Host for the API server."),
-    api_port: int = typer.Option(5000, "--api-port", help="Port for the API server."),
+    api_port: int = typer.Option(8000, "--api-port", help="Port for the API server."),
     gui_host: str = typer.Option("127.0.0.1", "--gui-host", help="Host for the GUI server."),
-    gui_port: int = typer.Option(5001, "--gui-port", help="Port for the GUI server."),
+    gui_port: int = typer.Option(8001, "--gui-port", help="Port for the GUI server."),
     env_type: EnvType = typer.Option(EnvType.MAC_VENV, "--env-type", "-e", help="Environment to use."),
     cors_mode: CorsMode = typer.Option(CorsMode.ENHANCED, "--cors", "-c", help="CORS configuration."),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug mode."),

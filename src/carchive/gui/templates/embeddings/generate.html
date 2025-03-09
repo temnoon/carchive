@@ -1,0 +1,165 @@
+{% extends 'layout.html' %}
+
+{% block title %}Generate Embeddings | {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-section {
+        display: none;
+    }
+    
+    .form-section.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Embeddings</h1>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Generate Embeddings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('embeddings.generate') }}">
+                        <div class="mb-3">
+                            <label for="embed_type" class="form-label">Embedding Type</label>
+                            <select id="embed_type" name="embed_type" class="form-select" required>
+                                <option value="">Select embedding type</option>
+                                <option value="text">Text Embedding</option>
+                                <option value="messages">Message Embedding</option>
+                                <option value="embed_all">Embed All Messages</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="provider" class="form-label">Provider</label>
+                            <select id="provider" name="provider" class="form-select">
+                                <option value="ollama">Ollama</option>
+                                <option value="openai">OpenAI</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="model" class="form-label">Model</label>
+                            <select id="model" name="model" class="form-select">
+                                <option value="nomic-embed-text">nomic-embed-text</option>
+                                <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Text Embedding Form Section -->
+                        <div id="text-form" class="form-section">
+                            <div class="mb-3">
+                                <label for="text" class="form-label">Text to Embed</label>
+                                <textarea id="text" name="text" class="form-control" rows="6" placeholder="Enter text to embed"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Message Embedding Form Section -->
+                        <div id="messages-form" class="form-section">
+                            <div class="mb-3">
+                                <label for="message_ids" class="form-label">Message IDs (one per line)</label>
+                                <textarea id="message_ids" name="message_ids" class="form-control" rows="6" placeholder="Enter message IDs, one per line"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Embed All Form Section -->
+                        <div id="embed-all-form" class="form-section">
+                            <div class="mb-3">
+                                <label for="min_word_count" class="form-label">Minimum Word Count</label>
+                                <input type="number" id="min_word_count" name="min_word_count" class="form-control" value="5" min="1">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Include Roles</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="include_roles" value="user" id="role_user" checked>
+                                    <label class="form-check-label" for="role_user">User</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="include_roles" value="assistant" id="role_assistant" checked>
+                                    <label class="form-check-label" for="role_assistant">Assistant</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="include_roles" value="system" id="role_system">
+                                    <label class="form-check-label" for="role_system">System</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="include_roles" value="tool" id="role_tool">
+                                    <label class="form-check-label" for="role_tool">Tool</label>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> This process may take a while for large number of messages.
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('embeddings.index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Generate Embeddings</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const embedTypeSelect = document.getElementById('embed_type');
+        
+        function updateFormSections() {
+            // Hide all form sections
+            document.querySelectorAll('.form-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show the selected form section
+            const selectedType = embedTypeSelect.value;
+            if (selectedType === 'text') {
+                document.getElementById('text-form').classList.add('active');
+            } else if (selectedType === 'messages') {
+                document.getElementById('messages-form').classList.add('active');
+            } else if (selectedType === 'embed_all') {
+                document.getElementById('embed-all-form').classList.add('active');
+            }
+        }
+        
+        // Initialize form sections
+        updateFormSections();
+        
+        // Handle embed type change
+        embedTypeSelect.addEventListener('change', updateFormSections);
+        
+        // Handle provider change to update model options
+        const providerSelect = document.getElementById('provider');
+        const modelSelect = document.getElementById('model');
+        
+        providerSelect.addEventListener('change', function() {
+            modelSelect.innerHTML = '';
+            
+            if (providerSelect.value === 'ollama') {
+                modelSelect.innerHTML = `
+                    <option value="nomic-embed-text">nomic-embed-text</option>
+                    <option value="all-minilm">all-minilm</option>
+                `;
+            } else if (providerSelect.value === 'openai') {
+                modelSelect.innerHTML = `
+                    <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                    <option value="text-embedding-3-small">text-embedding-3-small</option>
+                    <option value="text-embedding-3-large">text-embedding-3-large</option>
+                `;
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Generated Comments{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.index') }}">Gencom</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Comments</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>AI Generated Comments</h1>
+        <div>
+            <a href="{{ url_for('gencom.generate') }}" class="btn btn-primary">Generate New</a>
+            <a href="{{ url_for('gencom.batch') }}" class="btn btn-outline-primary">Batch Generate</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <form method="GET" action="{{ url_for('gencom.list') }}" class="d-flex">
+                        <div class="me-2">
+                            <select class="form-select" name="output_type" onchange="this.form.submit()">
+                                {% for ot in output_types %}
+                                <option value="{{ ot.id }}" {% if output_type == ot.id %}selected{% endif %}>{{ ot.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="me-2">
+                            <select class="form-select" name="target_type" onchange="this.form.submit()">
+                                <option value="">All Target Types</option>
+                                <option value="message" {% if target_type == 'message' %}selected{% endif %}>Messages</option>
+                                <option value="conversation" {% if target_type == 'conversation' %}selected{% endif %}>Conversations</option>
+                                <option value="chunk" {% if target_type == 'chunk' %}selected{% endif %}>Chunks</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('gencom.purge', output_type=output_type) }}" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash-alt me-1"></i> Purge Comments
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if not results %}
+                <div class="alert alert-info">
+                    No AI comments found matching the selected criteria.
+                </div>
+            {% else %}
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">Content</th>
+                            <th style="width: 40%;">Target</th>
+                            <th style="width: 20%;">Information</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in results %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('gencom.view', output_id=item.output.id) }}">
+                                    <strong>{{ item.output.content[:100] }}{% if item.output.content|length > 100 %}...{% endif %}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                {% if item.target_link %}
+                                <a href="{{ item.target_link }}">
+                                    {{ item.target_content[:100] }}{% if item.target_content|length > 100 %}...{% endif %}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">{{ item.target_content[:100] }}{% if item.target_content|length > 100 %}...{% endif %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <small class="text-muted">ID: {{ item.output.id }}</small>
+                                    <small class="text-muted">Type: {{ item.output.target_type }}</small>
+                                    <small class="text-muted">Agent: {{ item.output.agent_name }}</small>
+                                    <small class="text-muted">Created: {{ item.output.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <!-- Previous page -->
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('gencom.list', output_type=output_type, target_type=target_type, page=page-1) }}">Previous</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Page numbers -->
+                        {% for pg in range(max(1, page-2), min(total_pages+1, page+3)) %}
+                        <li class="page-item {% if pg == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('gencom.list', output_type=output_type, target_type=target_type, page=pg) }}">{{ pg }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        <!-- Next page -->
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('gencom.list', output_type=output_type, target_type=target_type, page=page+1) }}">Next</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+                <div class="mt-3 text-center">
+                    <small class="text-muted">Showing {{ results|length }} of {{ total }} total comments</small>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

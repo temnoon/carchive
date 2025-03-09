@@ -1,129 +1,62 @@
 #!/bin/bash
-# Combined script to manage both API and GUI servers on ports 8000/8001
-# This is the standardized server management script
+# Combined script to run both API and GUI servers on standardized ports
 
-# Function to check if a port is in use
-port_in_use() {
-  lsof -i:$1 >/dev/null 2>&1
-  return $?
-}
+# This script starts both the API server on port 8000 and the GUI server on port 8001
 
-# Function to stop a server on a specified port
-stop_server() {
-  local PORT=$1
-  local SERVER_TYPE=$2
-  
-  echo "Stopping $SERVER_TYPE server on port $PORT..."
-  if port_in_use $PORT; then
-    # Find and kill processes using this port
-    PID=$(lsof -t -i:$PORT)
-    if [ ! -z "$PID" ]; then
-      echo "Killing process $PID using port $PORT"
-      kill $PID
-      # Give it a moment to terminate
-      sleep 1
-      # Force kill if still running
-      if ps -p $PID > /dev/null; then
-        echo "Force killing process $PID"
-        kill -9 $PID 2>/dev/null
-      fi
-    fi
-  else
-    echo "No $SERVER_TYPE server running on port $PORT"
-  fi
-}
-
-# Parse command line arguments
-COMMAND=${1:-"status"}
+# First, check if ports are already in use
 API_PORT=8000
 GUI_PORT=8001
-API_HOST="localhost"
-GUI_HOST="localhost"
-DEBUG=0
 
-# Process based on command
-case "$COMMAND" in
-  start)
-    # Check if servers are already running
-    if port_in_use $API_PORT; then
-      echo "Warning: Something is already using port $API_PORT"
-      echo "Stop it first or use different ports"
-      exit 1
-    fi
-    
-    if port_in_use $GUI_PORT; then
-      echo "Warning: Something is already using port $GUI_PORT"
-      echo "Stop it first or use different ports"
-      exit 1
-    fi
-    
-    # Start API server
-    echo "Starting API server on port $API_PORT..."
-    ./run_api_8000.sh &
-    API_PID=$!
-    
-    # Give API server time to start
-    sleep 2
-    
-    # Start GUI server
-    echo "Starting GUI server on port $GUI_PORT..."
-    ./run_gui_8001.sh &
-    GUI_PID=$!
-    
-    echo ""
-    echo "Servers started successfully!"
-    echo "API server: http://$API_HOST:$API_PORT"
-    echo "GUI server: http://$GUI_HOST:$GUI_PORT"
-    echo ""
-    echo "You can access the web interface by opening http://$GUI_HOST:$GUI_PORT in your browser."
-    ;;
-    
-  stop)
-    # Stop both servers
-    stop_server $API_PORT "API"
-    stop_server $GUI_PORT "GUI"
-    echo "Servers stopped"
-    ;;
-    
-  restart)
-    # Stop both servers
-    "$0" stop
-    
-    # Wait a moment
-    sleep 2
-    
-    # Start both servers
-    "$0" start
-    ;;
-    
-  status)
-    # Check API server
-    if port_in_use $API_PORT; then
-      API_PID=$(lsof -t -i:$API_PORT)
-      echo "API server is RUNNING on port $API_PORT (PID: $API_PID)"
+check_port() {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
+        return 0  # Port is in use
     else
-      echo "API server is NOT RUNNING on port $API_PORT"
+        return 1  # Port is free
     fi
-    
-    # Check GUI server
-    if port_in_use $GUI_PORT; then
-      GUI_PID=$(lsof -t -i:$GUI_PORT)
-      echo "GUI server is RUNNING on port $GUI_PORT (PID: $GUI_PID)"
-    else
-      echo "GUI server is NOT RUNNING on port $GUI_PORT"
-    fi
-    ;;
-    
-  *)
-    echo "Usage: $0 {start|stop|restart|status}"
-    echo ""
-    echo "Commands:"
-    echo "  start    Start both API and GUI servers"
-    echo "  stop     Stop both servers"
-    echo "  restart  Restart both servers"
-    echo "  status   Show server status (default)"
-    exit 1
-    ;;
-esac
+}
 
-exit 0
+# Check if ports are in use and kill processes if needed
+if check_port $API_PORT; then
+    echo "Port $API_PORT is already in use. Attempting to free it..."
+    lsof -ti:$API_PORT | xargs kill -9
+    sleep 1
+fi
+
+if check_port $GUI_PORT; then
+    echo "Port $GUI_PORT is already in use. Attempting to free it..."
+    lsof -ti:$GUI_PORT | xargs kill -9
+    sleep 1
+fi
+
+# Activate the Python environment (prefer mac_venv if available)
+if [ -d "mac_venv" ]; then
+    source mac_venv/bin/activate
+elif [ -d "venv" ]; then
+    source venv/bin/activate
+fi
+
+# Start API server
+echo "Starting API server on port $API_PORT..."
+./run_api_8000.sh &
+API_PID=$!
+
+# Wait a moment for the API server to start
+sleep 2
+
+# Start GUI server
+echo "Starting GUI server on port $GUI_PORT..."
+./run_gui_8001.sh &
+GUI_PID=$!
+
+echo ""
+echo "Both servers have been started:"
+echo "  - API server: http://localhost:$API_PORT (PID: $API_PID)"
+echo "  - GUI server: http://localhost:$GUI_PORT (PID: $GUI_PID)"
+echo ""
+echo "You can access the web interface by opening: http://localhost:$GUI_PORT"
+echo "To stop the servers, press Ctrl+C or run: ./run_servers.sh stop"
+echo ""
+
+# Make the script wait (otherwise it will exit and kill the background processes)
+wait

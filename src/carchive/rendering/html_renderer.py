@@ -14,12 +14,23 @@ class HTMLRenderer(ContentRenderer):
     HTML renderer implementation for rendering content to HTML format.
     """
     
-    def __init__(self, templates_dir: Optional[str] = None):
+    def __init__(self, templates_dir: Optional[str] = None, web_mode: bool = False, api_url: Optional[str] = None):
         """
         Initialize with optional templates directory.
+        
+        Args:
+            templates_dir: Optional directory for templates
+            web_mode: If True, use web-safe URLs instead of file:// URLs
+            api_url: Base URL for API (used in web_mode)
         """
-        self.markdown_renderer = MarkdownRenderer()
+        # Set a hardcoded default for now
+        if web_mode and not api_url:
+            api_url = "http://localhost:8000"
+            
+        self.markdown_renderer = MarkdownRenderer(web_mode=web_mode, api_url=api_url)
         self.template_engine = TemplateEngine(templates_dir)
+        self.web_mode = web_mode
+        self.api_url = api_url or "http://localhost:8000"
     
     def render_text(self, text: str) -> str:
         """

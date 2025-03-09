@@ -1,5 +1,5 @@
 """
-GUI module for carchive2.
+GUI module for carchive.
 """
 
 import os
@@ -23,14 +23,22 @@ def create_app(test_config=None):
     
     # Load configuration
     if test_config is None:
+        # Import settings from config
+        from carchive.core.config import API_URL, API_BASE_URL, CORS_ENABLED
+        
         app.config.from_mapping(
             SECRET_KEY='dev',
-            API_URL='http://localhost:5000',  # URL for the API server
+            API_URL=API_URL,  # URL for the API server
+            API_BASE_URL=API_BASE_URL,  # Base URL for API endpoints
             SESSION_TYPE='filesystem',
             SESSION_PERMANENT=False,
             SESSION_USE_SIGNER=True,
-            DEBUG=True
+            DEBUG=os.environ.get('FLASK_DEBUG', 'True').lower() in ['true', '1', 't'],
+            CORS_ENABLED=CORS_ENABLED
         )
+        # Log the configuration
+        app.logger.info(f"GUI configured with API_URL: {API_URL}")
+        app.logger.info(f"GUI configured with API_BASE_URL: {API_BASE_URL}")
     else:
         app.config.from_mapping(test_config)
     

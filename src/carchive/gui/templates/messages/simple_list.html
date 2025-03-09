@@ -1,0 +1,251 @@
+{% extends 'layout.html' %}
+
+{% block title %}Browse Messages{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+  .search-highlight em {
+    background-color: #ffeb3b;
+    font-weight: bold;
+    font-style: normal;
+    padding: 2px;
+    border-radius: 2px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+          <h2>Message Search</h2>
+          <div>
+            <a href="{{ url_for('conversations.list_conversations') }}" class="btn btn-light btn-sm me-2">
+              <i class="fas fa-comments"></i> Conversations
+            </a>
+            <a href="{{ url_for('main.index') }}" class="btn btn-light btn-sm">
+              <i class="fas fa-home"></i> Home
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Search Form -->
+          <form action="{{ url_for('messages.real_list') }}" method="GET" class="mb-4">
+            <div class="row g-3 align-items-center">
+              <div class="col-md-9">
+                <div class="input-group">
+                  <input type="text" name="q" class="form-control" placeholder="Search message content..." value="{{ query|default('') }}" aria-label="Search">
+                  <button class="btn btn-primary" type="submit">Search</button>
+                  {% if query %}
+                    <a href="{{ url_for('messages.real_list', per_page=pagination.per_page) }}" class="btn btn-outline-secondary">
+                      <i class="fas fa-times"></i> Clear
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select name="per_page" class="form-select" aria-label="Results per page">
+                  <option value="20" {% if pagination.per_page == 20 %}selected{% endif %}>20 per page</option>
+                  <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50 per page</option>
+                  <option value="100" {% if pagination.per_page == 100 %}selected{% endif %}>100 per page</option>
+                  <option value="500" {% if pagination.per_page == 500 %}selected{% endif %}>500 per page</option>
+                </select>
+              </div>
+              <!-- Add a hidden field to keep gencom state consistent -->
+              <input type="hidden" name="gencom" value="false">
+            </div>
+          </form>
+          {% if api_error %}
+            <div class="alert alert-warning">
+              <h4 class="alert-heading">API Error</h4>
+              <p>{{ api_error }}</p>
+            </div>
+          {% else %}
+            {% if query %}
+              <div class="alert alert-info">
+                <h4 class="alert-heading">Search Results</h4>
+                <p>Found {{ pagination.total|default(messages|length) }} messages containing "<strong>{{ query }}</strong>"</p>
+                {% if pagination.total == 0 %}
+                  <p>No messages found matching your query. Try a different search term.</p>
+                {% endif %}
+              </div>
+            {% endif %}
+            
+            <h3>Messages {% if query %}Found{% else %}Listing{% endif %}: {{ messages|length }}</h3>
+            
+            {% if messages %}
+              <ul class="list-group mt-4">
+                {% for message in messages %}
+                  <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <!-- Simplified header without role dependency -->
+                      <strong class="badge bg-secondary p-2">
+                        Message
+                      </strong>
+                      <small class="text-muted">{{ message.created_at|datetime if message.created_at is defined else 'Unknown' }}</small>
+                    </div>
+                    
+                    <!-- Message Content -->
+                    <div class="message-content">
+                      {% if query and message.highlighted_content is defined %}
+                        <!-- Show highlighted content for search results -->
+                        <div class="search-highlight">
+                          {{ message.highlighted_content|safe }}
+                        </div>
+                        <div class="mt-2">
+                          <small class="text-muted">Showing search matches. <a href="{{ url_for('messages.view_message', message_id=message.id) }}">View full message</a></small>
+                        </div>
+                      {% else %}
+                        <!-- Render full content as markdown -->
+                        {{ message.content|safe if message.content else 'No content' }}
+                      {% endif %}
+                    </div>
+                    
+                    <!-- Meta Info Toggle -->
+                    <div class="mt-3">
+                      <button class="btn btn-sm btn-outline-secondary meta-toggle" data-bs-toggle="collapse" data-bs-target="#meta-{{ message.id }}">
+                        <i class="fas fa-info-circle"></i> Show Metadata
+                      </button>
+                      
+                      <div class="collapse mt-2" id="meta-{{ message.id }}">
+                        <div class="card card-body bg-light">
+                          {% if message.meta_info %}
+                            <pre class="mb-0"><code>{{ message.meta_info|tojson(indent=2) }}</code></pre>
+                          {% else %}
+                            <div class="text-muted">No metadata available</div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-3">
+                      {% if message.id %}
+                        <a href="{{ url_for('messages.view_message', message_id=message.id) }}" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-eye"></i> View Full Message
+                        </a>
+                        
+                        {% if message.has_gencom %}
+                          <a href="{{ url_for('messages.view_message', message_id=message.id, gencom='true') }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-brain"></i> View with AI Analysis
+                          </a>
+                        {% else %}
+                          <button class="btn btn-sm btn-outline-info" disabled title="No AI analysis available">
+                            <i class="fas fa-brain"></i> No AI Analysis
+                          </button>
+                        {% endif %}
+                      {% else %}
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                          <i class="fas fa-eye"></i> No Message ID
+                        </button>
+                      {% endif %}
+                      
+                      {% if message.conversation_id %}
+                        <a href="{{ url_for('conversations.view_conversation', conversation_id=message.conversation_id) }}" class="btn btn-sm btn-outline-secondary">
+                          <i class="fas fa-comments"></i> View in Conversation
+                        </a>
+                      {% else %}
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                          <i class="fas fa-comments"></i> No Conversation Link
+                        </button>
+                      {% endif %}
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <div class="alert alert-info">No messages found.</div>
+            {% endif %}
+          {% endif %}
+          
+          <!-- Pagination -->
+          {% if pagination and pagination.pages > 1 %}
+            <nav aria-label="Message pagination" class="mt-4">
+              <ul class="pagination justify-content-center">
+                {% if pagination.page > 1 %}
+                  <li class="page-item">
+                    <a class="page-link" href="{{ url_for('messages.real_list', q=query, page=pagination.page-1, per_page=pagination.per_page) }}">
+                      Previous
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                  </li>
+                {% endif %}
+                
+                {# Calculate page range manually #}
+                {% set start_page = pagination.page - 2 if pagination.page - 2 > 0 else 1 %}
+                {% set end_page = pagination.page + 2 if pagination.page + 2 < pagination.pages else pagination.pages %}
+                
+                {% for page_num in range(start_page, end_page + 1) %}
+                  <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('messages.real_list', q=query, page=page_num, per_page=pagination.per_page) }}">
+                      {{ page_num }}
+                    </a>
+                  </li>
+                {% endfor %}
+                
+                {% if pagination.page < pagination.pages %}
+                  <li class="page-item">
+                    <a class="page-link" href="{{ url_for('messages.real_list', q=query, page=pagination.page+1, per_page=pagination.per_page) }}">
+                      Next
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Toggle button text for metadata
+    document.querySelectorAll('.meta-toggle').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const isExpanded = this.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+          this.innerHTML = '<i class="fas fa-info-circle"></i> Hide Metadata';
+        } else {
+          this.innerHTML = '<i class="fas fa-info-circle"></i> Show Metadata';
+        }
+      });
+    });
+    
+    // Gencom toggle - auto-submit the form
+    const gencomToggle = document.getElementById('gencomToggle');
+    if (gencomToggle) {
+      gencomToggle.addEventListener('change', function() {
+        // Preserve existing query parameters
+        const query = new URLSearchParams(window.location.search);
+        
+        // Update gencom value based on checkbox
+        if (this.checked) {
+          query.set('gencom', 'true');
+        } else {
+          query.set('gencom', 'false');
+        }
+        
+        // Always set the submitted flag
+        query.set('gencom_submitted', 'true');
+        
+        // Navigate to the same page with updated parameters
+        window.location.href = window.location.pathname + '?' + query.toString();
+      });
+    }
+  });
+</script>
+{% endblock %}

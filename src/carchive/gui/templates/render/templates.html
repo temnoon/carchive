@@ -1,0 +1,31 @@
+{% extends 'layout.html' %}
+
+{% block title %}Rendering Templates{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Available Rendering Templates</h1>
+    <p>Below is a list of all templates available for rendering content.</p>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="list-group">
+                {% for template in templates %}
+                <div class="list-group-item">
+                    <h5 class="mb-1">{{ template }}</h5>
+                    {% if template == 'default' %}
+                    <p class="mb-1 text-muted">The standard template with clean formatting.</p>
+                    {% elif template == 'academic' %}
+                    <p class="mb-1 text-muted">Academic style with improved LaTeX and math rendering.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('render.render_home') }}" class="btn btn-primary">Back to Rendering Options</a>
+    </div>
+</div>
+{% endblock %}

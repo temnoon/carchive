@@ -1,0 +1,213 @@
+{% extends 'layout.html' %}
+
+{% block title %}Embeddings | {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .stats-card {
+        margin-bottom: 20px;
+    }
+    
+    .filter-form {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Embeddings Dashboard</h1>
+    
+    <div class="row">
+        <!-- Statistics Cards -->
+        <div class="col-md-12">
+            <div class="card stats-card">
+                <div class="card-header">
+                    <h5>Embedding Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ stats.total_embeddings|default(0) }}</h3>
+                                    <p class="text-muted">Total Embeddings</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-9">
+                            <div class="row">
+                                <!-- Provider Distribution -->
+                                <div class="col-md-4">
+                                    <h6>By Provider</h6>
+                                    <ul class="list-group">
+                                        {% for provider, count in stats.by_provider|default({}).items() %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ provider }}
+                                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                        </li>
+                                        {% else %}
+                                        <li class="list-group-item">No data available</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                
+                                <!-- Model Distribution -->
+                                <div class="col-md-4">
+                                    <h6>By Model</h6>
+                                    <ul class="list-group">
+                                        {% for model, count in stats.by_model|default({}).items() %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ model }}
+                                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                        </li>
+                                        {% else %}
+                                        <li class="list-group-item">No data available</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                
+                                <!-- Dimension Distribution -->
+                                <div class="col-md-4">
+                                    <h6>By Dimensions</h6>
+                                    <ul class="list-group">
+                                        {% for dim, count in stats.by_dimensions|default({}).items() %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ dim }} dimensions
+                                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                        </li>
+                                        {% else %}
+                                        <li class="list-group-item">No data available</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <a href="{{ url_for('embeddings.generate') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Generate Embeddings
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card filter-form">
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('embeddings.index') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="provider" class="form-label">Provider</label>
+                            <select name="provider" id="provider" class="form-select">
+                                <option value="">All Providers</option>
+                                {% for provider in stats.by_provider|default({}).keys() %}
+                                <option value="{{ provider }}" {% if provider_filter == provider %}selected{% endif %}>{{ provider }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="model" class="form-label">Model</label>
+                            <select name="model" id="model" class="form-select">
+                                <option value="">All Models</option>
+                                {% for model in stats.by_model|default({}).keys() %}
+                                <option value="{{ model }}" {% if model_filter == model %}selected{% endif %}>{{ model }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="{{ url_for('embeddings.index') }}" class="btn btn-outline-secondary ms-2">Reset</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Embeddings List -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Embeddings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Provider</th>
+                                    <th>Model</th>
+                                    <th>Dimensions</th>
+                                    <th>Parent Type</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emb in embeddings %}
+                                <tr>
+                                    <td>{{ emb.id|truncate(8, true, '') }}</td>
+                                    <td>{{ emb.model_name }}</td>
+                                    <td>{{ emb.model_version }}</td>
+                                    <td>{{ emb.dimensions }}</td>
+                                    <td>{{ emb.parent_type|default('raw_text') }}</td>
+                                    <td>{{ emb.created_at|datetime }}</td>
+                                    <td>
+                                        <a href="{{ url_for('embeddings.view', embedding_id=emb.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <form method="post" action="{{ url_for('embeddings.delete', embedding_id=emb.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this embedding?');">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No embeddings found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if pagination and pagination.pages > 1 %}
+                    <nav aria-label="Embeddings pagination">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {{ 'disabled' if pagination.page == 1 else '' }}">
+                                <a class="page-link" href="{{ url_for('embeddings.index', page=pagination.page-1, provider=provider_filter, model=model_filter) }}">Previous</a>
+                            </li>
+                            
+                            {% for page_num in range(1, pagination.pages + 1) %}
+                            <li class="page-item {{ 'active' if pagination.page == page_num else '' }}">
+                                <a class="page-link" href="{{ url_for('embeddings.index', page=page_num, provider=provider_filter, model=model_filter) }}">{{ page_num }}</a>
+                            </li>
+                            {% endfor %}
+                            
+                            <li class="page-item {{ 'disabled' if pagination.page == pagination.pages else '' }}">
+                                <a class="page-link" href="{{ url_for('embeddings.index', page=pagination.page+1, provider=provider_filter, model=model_filter) }}">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

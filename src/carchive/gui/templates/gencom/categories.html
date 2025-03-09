@@ -1,0 +1,186 @@
+{% extends "layout.html" %}
+
+{% block title %}Category Analysis{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.index') }}">Gencom</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Category Analysis</li>
+        </ol>
+    </nav>
+
+    <h1>AI-Generated Category Analysis</h1>
+    <p class="lead">Analyze distribution of AI-generated categories across content.</p>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Category Analysis Options</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('gencom.categories') }}">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="target_type" class="form-label">Target Type</label>
+                        <select class="form-select" id="target_type" name="target_type">
+                            <option value="message" {% if target_type == 'message' %}selected{% endif %}>Messages</option>
+                            <option value="conversation" {% if target_type == 'conversation' %}selected{% endif %}>Conversations</option>
+                            <option value="chunk" {% if target_type == 'chunk' %}selected{% endif %}>Chunks</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="output_type" class="form-label">Output Type</label>
+                        <select class="form-select" id="output_type" name="output_type">
+                            {% for ot in output_types %}
+                            <option value="{{ ot.id }}" {% if output_type == ot.id %}selected{% endif %}>{{ ot.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4" id="role_container">
+                        <label for="role" class="form-label">Message Role (for messages only)</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="">Any Role</option>
+                            {% for role in message_roles %}
+                            <option value="{{ role }}" {% if role == role %}selected{% endif %}>{{ role }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="min_count" class="form-label">Minimum Count</label>
+                        <input type="number" class="form-control" id="min_count" name="min_count" min="1" value="{{ min_count }}">
+                        <div class="form-text">Minimum occurrences to include a category</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="limit" class="form-label">Limit</label>
+                        <input type="number" class="form-control" id="limit" name="limit" min="1" value="{{ limit }}">
+                        <div class="form-text">Maximum number of categories to show</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="format" class="form-label">Display Format</label>
+                        <select class="form-select" id="format" name="format">
+                            <option value="chart" {% if format_type == 'chart' %}selected{% endif %}>Chart</option>
+                            <option value="table" {% if format_type == 'table' %}selected{% endif %}>Table</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="chart_type_container">
+                        <label for="chart_type" class="form-label">Chart Type</label>
+                        <select class="form-select" id="chart_type" name="chart_type">
+                            <option value="pie" {% if chart_type == 'pie' %}selected{% endif %}>Pie Chart</option>
+                            <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Bar Chart</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="exclude_generic" name="exclude_generic" value="true" {% if exclude_generic %}checked{% endif %}>
+                    <label class="form-check-label" for="exclude_generic">
+                        Exclude generic categories (e.g., "waiting", "no content", etc.)
+                    </label>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-primary">Analyze Categories</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if categories %}
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Category Analysis Results</h5>
+        </div>
+        <div class="card-body">
+            {% if format_type == 'chart' and chart_img %}
+            <div class="text-center mb-4">
+                <img src="data:image/png;base64,{{ chart_img }}" class="img-fluid" alt="Category Distribution Chart">
+            </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Count</th>
+                            {% if target_type == 'message' %}
+                            <th>Role Distribution</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cat in categories %}
+                        <tr>
+                            <td><strong>{{ cat.category }}</strong></td>
+                            <td>{{ cat.total }}</td>
+                            {% if target_type == 'message' and cat.role_counts %}
+                            <td>
+                                <div class="d-flex flex-wrap">
+                                    {% for role, count in cat.role_counts.items() %}
+                                    <span class="badge {% if role == 'assistant' %}bg-primary{% elif role == 'user' %}bg-success{% else %}bg-secondary{% endif %} me-1 mb-1">
+                                        {{ role }}: {{ count }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-3 text-center">
+                <small class="text-muted">Showing {{ categories|length }} categories with minimum count of {{ min_count }}</small>
+            </div>
+        </div>
+    </div>
+    {% elif categories is defined %}
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle me-2"></i>
+        No categories found matching the specified criteria.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const formatSelect = document.getElementById('format');
+        const chartTypeContainer = document.getElementById('chart_type_container');
+        const targetTypeSelect = document.getElementById('target_type');
+        const roleContainer = document.getElementById('role_container');
+        
+        // Show/hide chart type selector based on format
+        formatSelect.addEventListener('change', function() {
+            if (this.value === 'chart') {
+                chartTypeContainer.style.display = 'block';
+            } else {
+                chartTypeContainer.style.display = 'none';
+            }
+        });
+        
+        // Show/hide role selector based on target type
+        targetTypeSelect.addEventListener('change', function() {
+            if (this.value === 'message') {
+                roleContainer.style.display = 'block';
+            } else {
+                roleContainer.style.display = 'none';
+                document.getElementById('role').value = '';
+            }
+        });
+        
+        // Initialize visibility
+        if (formatSelect.value !== 'chart') {
+            chartTypeContainer.style.display = 'none';
+        }
+        
+        if (targetTypeSelect.value !== 'message') {
+            roleContainer.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

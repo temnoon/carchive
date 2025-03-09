@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+
+{% block title %}Combine Collections{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Combine Collections</h1>
+    <p>Select multiple collections to render together in a single document.</p>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="post" action="{{ url_for('render.render_combined') }}">
+                <div class="mb-3">
+                    <label for="collections" class="form-label">Collections to Combine</label>
+                    <select name="collections" id="collections" class="form-select" multiple size="10" required>
+                        {% for collection in collections %}
+                        <option value="{{ collection.name }}">{{ collection.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Hold Ctrl (or Command on Mac) to select multiple collections.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="title" class="form-label">Document Title (optional)</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="Leave blank for auto-generated title">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="template" class="form-label">Template</label>
+                    <select id="template" name="template" class="form-select">
+                        {% for template in templates %}
+                        <option value="{{ template }}" {% if template == 'default' %}selected{% endif %}>{{ template }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="format" class="form-label">Format</label>
+                    <select id="format" name="format" class="form-select">
+                        {% for format in formats %}
+                        <option value="{{ format }}">{{ format.upper() }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not pdf_available %}
+                    <small class="text-muted">PDF format requires WeasyPrint to be installed.</small>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="download" name="download" value="true">
+                    <label class="form-check-label" for="download">Download File</label>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('render.render_home') }}" class="btn btn-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary">Render Combined Collections</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

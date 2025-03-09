@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+
+{% block title %}Gencom - AI-Generated Comments{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Gencom - AI-Generated Comments</h1>
+    <p class="lead">Generate AI comments on content, create categories, summaries, and more.</p>
+
+    <div class="row mt-4">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Single Item Processing</h5>
+                    <p class="card-text">Generate an AI comment for a specific message, conversation, or chunk.</p>
+                    <a href="{{ url_for('gencom.generate') }}" class="btn btn-primary">Generate Comment</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Batch Processing</h5>
+                    <p class="card-text">Generate comments for multiple items matching specific criteria.</p>
+                    <a href="{{ url_for('gencom.batch') }}" class="btn btn-primary">Batch Generate</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">View Generated Comments</h5>
+                    <p class="card-text">Browse and search previously generated AI comments.</p>
+                    <a href="{{ url_for('gencom.list') }}" class="btn btn-primary">View Comments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Category Analysis</h5>
+                    <p class="card-text">Analyze distribution of AI-generated categories.</p>
+                    <a href="{{ url_for('gencom.categories') }}" class="btn btn-primary">Analyze Categories</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Purge Comments</h5>
+                    <p class="card-text">Delete generated comments matching specific criteria.</p>
+                    <a href="{{ url_for('gencom.purge') }}" class="btn btn-outline-danger">Purge Comments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Available Comment Types</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for output_type in output_types %}
+                            <tr>
+                                <td><strong>{{ output_type.name }}</strong></td>
+                                <td>{{ output_type.description }}</td>
+                                <td>
+                                    <a href="{{ url_for('gencom.list', output_type=output_type.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                                    <a href="{{ url_for('gencom.generate', output_type=output_type.id) }}" class="btn btn-sm btn-outline-primary">Generate</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

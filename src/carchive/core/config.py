@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     chat_provider: str = Field(default="ollama")
     content_provider: str = Field(default="ollama")
     multimodal_provider: str = Field(default="ollama")
+    
+    # API and GUI server configuration
+    api_url: str = Field(default="http://localhost:8000")
+    api_base_url: str = Field(default="http://localhost:8000/api")
+    gui_url: str = Field(default="http://localhost:8001")
+    media_dir: str = Field(default="media")
+    cors_enabled: bool = Field(default=True)
 
     # Model configurations
     embedding_model_name: str = Field(default="nomic-embed-text")
@@ -69,11 +76,24 @@ OPENAI_API_KEY = settings.get_secure_value("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = settings.get_secure_value("ANTHROPIC_API_KEY")
 GROQ_API_KEY = settings.get_secure_value("GROQ_API_KEY")
 OLLAMA_URL = settings.get_secure_value("OLLAMA_URL")
+
+# Function to get the database URL (for backward compatibility)
+def get_database_url():
+    """Return the database URL string."""
+    return DATABASE_URL
+
 # Default providers
 DEFAULT_EMBEDDING_PROVIDER = EMBEDDING_PROVIDER = settings.embedding_provider
 DEFAULT_CHAT_PROVIDER = CHAT_PROVIDER = settings.chat_provider
 DEFAULT_CONTENT_PROVIDER = CONTENT_PROVIDER = settings.content_provider
 DEFAULT_MULTIMODAL_PROVIDER = MULTIMODAL_PROVIDER = settings.multimodal_provider
+
+# Server configuration
+API_URL = settings.api_url
+API_BASE_URL = settings.api_base_url
+GUI_URL = settings.gui_url
+MEDIA_DIR = settings.media_dir
+CORS_ENABLED = settings.cors_enabled
 
 # Model settings
 DEFAULT_EMBEDDING_MODEL = EMBEDDING_MODEL_NAME = settings.embedding_model_name

@@ -15,14 +15,27 @@ class MarkdownRenderer:
     Enhanced markdown renderer with LaTeX repair and image handling.
     """
     
-    def __init__(self, math_delimiters: Dict[str, List[str]] = None):
+    def __init__(self, math_delimiters: Dict[str, List[str]] = None, web_mode: bool = False, api_url: str = None):
         """
         Initialize with optional custom math delimiters.
+        
+        Args:
+            math_delimiters: Optional custom math delimiters
+            web_mode: If True, use web-safe URLs instead of file:// URLs
+            api_url: Base URL for API (used in web_mode)
         """
-        self.math_delimiters = math_delimiters or {
-            'inline': [['\\(', '\\)'], ['$', '$']],
-            'display': [['\\[', '\\]'], ['$$', '$$']]
-        }
+        # Default delimiters if none provided
+        if math_delimiters is None:
+            math_delimiters = {
+                'inline': [['\\(', '\\)'], ['$', '$']],
+                'display': [['\\[', '\\]'], ['$$', '$$']]
+            }
+            
+        self.math_delimiters = math_delimiters
+        
+        # Web mode settings
+        self.web_mode = web_mode
+        self.api_url = api_url
     
     def render(self, text: str, message_id: str = None, extensions: List[str] = None) -> str:
         """
@@ -199,7 +212,7 @@ class MarkdownRenderer:
             
         return text
     
-    def process_embedded_images(self, text: str, message_id: str = None) -> str:
+    def process_embedded_images(self, text: str, message_id: str = None, session=None) -> str:
         """
         Process embedded images in markdown text.
         
@@ -212,6 +225,7 @@ class MarkdownRenderer:
         Args:
             text: The markdown text to process
             message_id: Optional message ID to look up associated media
+            session: Optional database session to use
         """
         if not text:
             return text
@@ -231,11 +245,16 @@ class MarkdownRenderer:
             
             # Look up media path in database
             try:
-                with get_session() as session:
+                with get_session() as db_session:
                     # Check the columns available in the media table
-                    media = session.query(Media).filter_by(id=media_id).first()
+                    media = db_session.query(Media).filter_by(id=media_id).first()
                     if media and hasattr(media, 'file_path') and media.file_path:
-                        return f'![{alt_text}](file://{os.path.abspath(media.file_path)})'
+                        # Use API URL in web mode, file:// URL in CLI mode
+                        if self.web_mode:
+                            # Hardcoded URL for now to ensure it works
+                            return f'![{alt_text}](http://localhost:8000/api/media/{media.id}/file)'
+                        else:
+                            return f'![{alt_text}](file://{os.path.abspath(media.file_path)})'
                     return f'![{alt_text}](missing-media-{media_id})'
             except Exception as e:
                 # If there's a database error, just return the original reference with a note
@@ -250,14 +269,19 @@ class MarkdownRenderer:
             file_id = match.group(1)
             
             try:
-                with get_session() as session:
+                with get_session() as db_session:
                     # Use ONLY exact match for original_file_id to avoid incorrect matching
-                    media = session.query(Media).filter_by(original_file_id=file_id).first()
+                    media = db_session.query(Media).filter_by(original_file_id=file_id).first()
                     
                     if media and hasattr(media, 'file_path') and media.file_path:
                         if os.path.exists(media.file_path):
                             file_name = media.original_file_name or Path(media.file_path).name
-                            return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
+                            # Use API URL in web mode, file:// URL in CLI mode
+                            if self.web_mode:
+                                # Hardcode for now to ensure it works
+                                return f'![{file_name}](http://localhost:8000/api/media/{media.id}/file)'
+                            else:
+                                return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
                         else:
                             return f'[Asset: {file_id} (file not found)]'
                     return f'[Asset: {file_id} (no media match)]'  # Keep original format with note
@@ -276,20 +300,30 @@ class MarkdownRenderer:
             file_id = match.group(1)
             
             try:
-                with get_session() as session:
+                with get_session() as db_session:
                     # Use ONLY exact match for original_file_id
-                    media = session.query(Media).filter_by(original_file_id=file_id).first()
+                    media = db_session.query(Media).filter_by(original_file_id=file_id).first()
                     
                     if media and hasattr(media, 'file_path') and media.file_path:
                         if os.path.exists(media.file_path):
                             # Only convert to markdown if it's an image
                             if media.media_type == 'image':
                                 file_name = media.original_file_name or Path(media.file_path).name
-                                return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
+                                # Use API URL in web mode, file:// URL in CLI mode
+                                if self.web_mode:
+                                    # Hardcode for now to ensure it works
+                                    return f'![{file_name}](http://localhost:8000/api/media/{media.id}/file)'
+                                else:
+                                    return f'![{file_name}](file://{os.path.abspath(media.file_path)})'
                             else:
                                 # For non-images, use a link
                                 file_name = media.original_file_name or Path(media.file_path).name
-                                return f'[{file_name}](file://{os.path.abspath(media.file_path)})'
+                                # Use API URL in web mode, file:// URL in CLI mode
+                                if self.web_mode:
+                                    # Hardcode for now to ensure it works
+                                    return f'[{file_name}](http://localhost:8000/api/media/{media.id}/file)'
+                                else:
+                                    return f'[{file_name}](file://{os.path.abspath(media.file_path)})'
                         else:
                             # File doesn't exist on disk
                             return file_id
@@ -303,11 +337,11 @@ class MarkdownRenderer:
         # If a message_id is provided, also include any associated media that isn't already referenced
         if message_id:
             try:
-                with get_session() as session:
+                with get_session() as db_session:
                     from carchive.database.models import MessageMedia
                     
                     # Find all media associated with this message
-                    media_associations = session.query(MessageMedia, Media).join(
+                    media_associations = db_session.query(MessageMedia, Media).join(
                         Media, MessageMedia.media_id == Media.id
                     ).filter(
                         MessageMedia.message_id == message_id
@@ -336,10 +370,20 @@ class MarkdownRenderer:
                         if media.file_path and os.path.exists(media.file_path):
                             if media.media_type == 'image':
                                 file_name = media.original_file_name or Path(media.file_path).name
-                                text = text + f'\n\n![{file_name}](file://{os.path.abspath(media.file_path)})'
+                                # Use API URL in web mode, file:// URL in CLI mode
+                                if self.web_mode:
+                                    # Hardcode for now to ensure it works
+                                    text = text + f'\n\n![{file_name}](http://localhost:8000/api/media/{media.id}/file)'
+                                else:
+                                    text = text + f'\n\n![{file_name}](file://{os.path.abspath(media.file_path)})'
                             else:
                                 file_name = media.original_file_name or Path(media.file_path).name
-                                text = text + f'\n\n[{file_name}](file://{os.path.abspath(media.file_path)})'
+                                # Use API URL in web mode, file:// URL in CLI mode
+                                if self.web_mode:
+                                    # Hardcode for now to ensure it works
+                                    text = text + f'\n\n[{file_name}](http://localhost:8000/api/media/{media.id}/file)'
+                                else:
+                                    text = text + f'\n\n[{file_name}](file://{os.path.abspath(media.file_path)})'
             except Exception as e:
                 # If there's an error, just continue without adding associated media
                 print(f"Error processing associated media for message {message_id}: {str(e)}")

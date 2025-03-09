@@ -42,6 +42,25 @@
                             <a class="nav-link {% if '/collections' in request.path %}active{% endif %}" href="{{ url_for('collections.list_collections') }}">Collections</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if '/render' in request.path %}active{% endif %}" href="{{ url_for('render.render_home') }}">Render</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/gencom' in request.path %}active{% endif %}" href="{{ url_for('gencom.index') }}">Gencom</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if '/embeddings' in request.path or '/clusters' in request.path %}active{% endif %}" href="#" id="embeddingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Embeddings
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="embeddingsDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('embeddings.index') }}">Embeddings</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('embeddings.generate') }}">Generate</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('clusters.index') }}">Clusters</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('clusters.create') }}">Create Clusters</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('clusters.analyze') }}">Analyze</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if '/cli' in request.path %}active{% endif %}" href="{{ url_for('cli.cli_dashboard') }}">CLI</a>
                         </li>
                     </ul>

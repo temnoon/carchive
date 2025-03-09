@@ -8,12 +8,16 @@ from sqlalchemy import desc, func, or_, cast, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import joinedload, Session
 import json
+import logging
+from flask_cors import cross_origin
 
 from carchive.database.models import Conversation, Message, Media, Embedding
 from carchive.api.schemas import ConversationBase, MessageBase, MediaBase, SearchResult
 from carchive.api.routes.utils import (
     db_session, parse_pagination_params, error_response
 )
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('search', __name__, url_prefix='/api/search')
 
@@ -449,6 +453,53 @@ def get_saved_searches(session: Session):
         logger.error(f"Error retrieving saved searches: {e}")
         return error_response(500, f"Error retrieving saved searches: {str(e)}")
 
+
+@bp.route('/conversations', methods=['GET'])
+@cross_origin()
+@db_session
+def search_conversations(session: Session):
+    """Search only conversations by title or content."""
+    query = request.args.get('q', '')
+    limit = request.args.get('limit', 10, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    if not query or len(query) < 2:
+        return jsonify({
+            'query': query,
+            'results': [],
+            'total': 0
+        })
+    
+    try:
+        # Search conversations by title
+        conv_query = session.query(Conversation).filter(
+            or_(
+                Conversation.title.ilike(f'%{query}%'),
+                # Try casting meta_info to JSONB for better searching in PostgreSQL
+                cast(Conversation.meta_info, JSONB).contains({"summary": f"%{query}%"})
+            )
+        ).order_by(desc(Conversation.created_at))
+        
+        # Get total count
+        total = conv_query.count()
+        
+        # Apply pagination
+        conversations = conv_query.offset(offset).limit(limit).all()
+        
+        # Format conversations
+        results = [ConversationBase.from_orm(conv).dict() for conv in conversations]
+        
+        return jsonify({
+            'query': query,
+            'results': results,
+            'total': total,
+            'limit': limit,
+            'offset': offset
+        })
+    
+    except Exception as e:
+        logger.error(f"Error searching conversations: {e}")
+        return error_response(500, f"Error searching conversations: {str(e)}")
 
 @bp.route('/saved/<search_id>', methods=['GET'])
 @db_session

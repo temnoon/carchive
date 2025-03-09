@@ -37,9 +37,17 @@
                     </div>
                     
                     <div class="d-flex justify-content-between mt-2">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="gencomToggle" {% if show_gencom %}checked{% endif %}>
-                            <label class="form-check-label" for="gencomToggle">Show AI Analysis (gencom)</label>
+                        <div class="d-flex align-items-center">
+                            <div class="form-check form-switch me-3">
+                                <input class="form-check-input" type="checkbox" id="gencomToggle" {% if show_gencom %}checked{% endif %}>
+                                <label class="form-check-label" for="gencomToggle">Show AI Analysis (gencom)</label>
+                            </div>
+                            
+                            {% if conversation.has_media %}
+                                <a href="{{ url_for('conversations.conversation_media', conversation_id=conversation.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-images"></i> View Media Gallery
+                                </a>
+                            {% endif %}
                         </div>
                         
                         <div class="dropdown">
@@ -102,21 +110,57 @@
                                         {% if message.role == 'tool' and message.content|trim|first == '{' and message.content|trim|last == '}' %}
                                             <pre class="tool-json">{{ message.content|trim }}</pre>
                                         {% else %}
-                                            {{ message.content|safe }}
+                                            {% if message.processed_content is defined %}
+                                                {{ message.processed_content|safe }}
+                                            {% else %}
+                                                {{ message.content|safe }}
+                                            {% endif %}
                                         {% endif %}
                                         
-                                        {% if message.media_items %}
-                                            <div class="message-media mt-3">
+                                        <!-- Display media attached to the message -->
+                                        {% if message.has_media %}
+                                            <div class="message-media mt-3 border-top pt-3">
                                                 <h5>Media:</h5>
                                                 <div class="row">
-                                                    {% for media in message.media_items %}
+                                                    <!-- Handle media_items array (newer method) -->
+                                                    {% if message.media_items %}
+                                                        {% for media in message.media_items %}
+                                                            <div class="col-md-3 mb-3">
+                                                                {% if media.media_type == 'image' %}
+                                                                    <a href="{{ url_for('media.view_media', media_id=media.id) }}" class="media-thumbnail">
+                                                                        <img src="{{ media.preview_url }}" alt="{{ media.original_file_name or 'Image' }}" class="img-thumbnail">
+                                                                        <div class="mt-1 small text-truncate">{{ media.original_file_name or 'Image' }}</div>
+                                                                    </a>
+                                                                {% else %}
+                                                                    <a href="{{ url_for('media.view_media', media_id=media.id) }}" class="media-file">
+                                                                        <div class="file-icon text-center">
+                                                                            <i class="fas fa-file fa-3x mb-2"></i>
+                                                                            <div class="small text-truncate">{{ media.original_file_name or media.id }}</div>
+                                                                        </div>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                    
+                                                    <!-- Handle single media item (legacy/compatibility) -->
+                                                    {% if message.media and not message.media_items %}
                                                         <div class="col-md-3 mb-3">
-                                                            <a href="{{ url_for('media.view_media', media_id=media.id) }}" class="media-thumbnail">
-                                                                <img src="{{ url_for('media.thumbnail', media_id=media.id) }}" alt="{{ media.filename }}" class="img-thumbnail">
-                                                                <div class="mt-1 small text-truncate">{{ media.filename }}</div>
-                                                            </a>
+                                                            {% if message.media.media_type == 'image' %}
+                                                                <a href="{{ url_for('media.view_media', media_id=message.media.id) }}" class="media-thumbnail">
+                                                                    <img src="{{ message.media.preview_url }}" alt="{{ message.media.original_file_name or 'Image' }}" class="img-thumbnail">
+                                                                    <div class="mt-1 small text-truncate">{{ message.media.original_file_name or 'Image' }}</div>
+                                                                </a>
+                                                            {% else %}
+                                                                <a href="{{ url_for('media.view_media', media_id=message.media.id) }}" class="media-file">
+                                                                    <div class="file-icon text-center">
+                                                                        <i class="fas fa-file fa-3x mb-2"></i>
+                                                                        <div class="small text-truncate">{{ message.media.original_file_name or message.media.id }}</div>
+                                                                    </div>
+                                                                </a>
+                                                            {% endif %}
                                                         </div>
-                                                    {% endfor %}
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         {% endif %}
@@ -314,6 +358,40 @@
     border-radius: 4px;
     overflow-x: auto;
 }
+.message-media img {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+}
+.media-thumbnail {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    transition: all 0.2s;
+}
+.media-thumbnail:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-decoration: none;
+}
+.media-file {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    transition: all 0.2s;
+}
+.media-file:hover {
+    background-color: #e9ecef;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-decoration: none;
+}
 </style>
 
 {% block extra_scripts %}
@@ -337,6 +415,27 @@
             trigger.addEventListener('click', function() {
                 this.classList.toggle('collapsed');
             });
+        });
+        
+        // Handle media image loading errors
+        document.querySelectorAll('.message-media img').forEach(function(img) {
+            img.onerror = function() {
+                // Replace with placeholder icon when image fails to load
+                const parent = this.parentNode;
+                const link = parent.closest('a');
+                const filename = this.alt || 'Image';
+                
+                // Only replace if this is in a link
+                if (link) {
+                    parent.innerHTML = `
+                        <div class="file-icon text-center">
+                            <i class="fas fa-file-image fa-3x mb-2 text-muted"></i>
+                            <div class="small text-truncate">${filename}</div>
+                            <div class="small text-danger">Image load failed</div>
+                        </div>
+                    `;
+                }
+            };
         });
     });
 </script>

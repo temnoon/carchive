@@ -1,0 +1,127 @@
+{% extends "layout.html" %}
+
+{% block title %}View AI Comment{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.index') }}">Gencom</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.list') }}">Comments</a></li>
+            <li class="breadcrumb-item active" aria-current="page">View Comment</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>AI Generated Comment</h1>
+        <div>
+            {% if target_link %}
+            <a href="{{ target_link }}" class="btn btn-outline-primary me-2">View Target</a>
+            {% endif %}
+            <a href="{{ url_for('gencom.list', output_type=output.output_type) }}" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">AI Comment</h5>
+                        <div>
+                            <span class="badge bg-light text-dark me-2">{{ output.output_type }}</span>
+                            <span class="badge bg-secondary">{{ output.agent_name }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Generated Comment:</h6>
+                        <div class="p-3 bg-light rounded">
+                            {{ output.content | safe | nl2br }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Comment Details:</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row" style="width: 150px;">Comment ID:</th>
+                                        <td>{{ output.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Created:</th>
+                                        <td>{{ output.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Output Type:</th>
+                                        <td>{{ output.output_type }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Agent:</th>
+                                        <td>{{ output.agent_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Has Embedding:</th>
+                                        <td>{% if has_embedding %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Target Information:</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row" style="width: 150px;">Target Type:</th>
+                                        <td>{{ output.target_type }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Target ID:</th>
+                                        <td>{{ output.target_id }}</td>
+                                    </tr>
+                                    {% if target_link %}
+                                    <tr>
+                                        <th scope="row">Target Link:</th>
+                                        <td><a href="{{ target_link }}">View Original</a></td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if target_content %}
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Original Content</h5>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 bg-light rounded">
+                        {{ target_content | safe | nl2br }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-4 mb-5">
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('gencom.generate', target_type=output.target_type, target_id=output.target_id, output_type=output.output_type) }}" class="btn btn-outline-primary">
+                Generate New Comment
+            </a>
+            <a href="{{ url_for('gencom.list', output_type=output.output_type) }}" class="btn btn-outline-secondary">
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

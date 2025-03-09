@@ -1,0 +1,14 @@
+                  id                  |                  title                   |                        file_path                        
+--------------------------------------+------------------------------------------+---------------------------------------------------------
+ 3d111b6e-77f3-4a0f-9fc9-8e01e5e04ace | Dirac Equation Metaphysics Visualization | media/chatgpt/18995c2f-5008-42b7-bf10-a9c1e0002ab1.webp
+ 3011661d-2f54-4cd9-bfb7-4ae0ceff1b22 | Chariot Parable Illustration             | media/chatgpt/c425a330-1559-47bf-88f7-692e70ad983d.webp
+ 7b11312e-b898-47a6-bb79-f9a40b9f3d86 | Cosmic Web Image Summary                 | media/chatgpt/91f6bbd9-7852-4123-82d3-ef0cc634b6e2.webp
+ 7b11312e-b898-47a6-bb79-f9a40b9f3d86 | Cosmic Web Image Summary                 | media/chatgpt/49fcba5c-1e33-4cc9-9796-864ac5a48bff.webp
+ 7b11312e-b898-47a6-bb79-f9a40b9f3d86 | Cosmic Web Image Summary                 | media/chatgpt/44753c92-3b01-4f74-a90f-fdb83b54d367.webp
+ c0a3c5b0-592c-4436-a4cb-204828ec794e | Buddha's Teachings Analysis              | media/chatgpt/5e05b021-c2f3-4e62-b474-270dddef1fb4.webp
+ 3ff7e987-32eb-412f-b753-64fdc07f0139 | Cosmic Artistic Representation           | media/chatgpt/2e842aa6-090b-42ee-8690-4f61e4fddcb7.webp
+ 3ff7e987-32eb-412f-b753-64fdc07f0139 | Cosmic Artistic Representation           | media/chatgpt/8ba20af1-39df-4fb3-891b-2101cf1e042d.webp
+ 3ff7e987-32eb-412f-b753-64fdc07f0139 | Cosmic Artistic Representation           | media/chatgpt/b3628939-9802-4478-bc84-9a6e2b3dcc31.webp
+ a250f79f-d363-43c1-9831-6dfe6765d93f | Einstein Theory Equations                | media/chatgpt/58929534-ffd7-4c53-9cd1-aff165535cb2.webp
+(10 rows)
+

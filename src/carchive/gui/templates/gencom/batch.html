@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+
+{% block title %}Batch Generate AI Comments{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('gencom.index') }}">Gencom</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Batch Generate</li>
+        </ol>
+    </nav>
+
+    <h1>Batch Generate AI Comments</h1>
+    <p class="lead">Generate AI comments for multiple content items matching specific criteria.</p>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('gencom.batch') }}">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="target_type" class="form-label">Target Type</label>
+                        <select class="form-select" id="target_type" name="target_type" required>
+                            <option value="message" selected>Message</option>
+                            <option value="conversation">Conversation</option>
+                            <option value="chunk">Chunk</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="output_type" class="form-label">Output Type</label>
+                        <select class="form-select" id="output_type" name="output_type">
+                            {% for ot in output_types %}
+                            <option value="{{ ot.id }}">{{ ot.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" id="output_description"></div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="provider" class="form-label">Provider</label>
+                        <select class="form-select" id="provider" name="provider">
+                            {% for provider in providers %}
+                            <option value="{{ provider }}">{{ provider }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6" id="roles_container">
+                        <label class="form-label">Message Roles (for messages only)</label>
+                        <div class="pt-2">
+                            {% for role in message_roles %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="roles" id="role_{{ role }}" value="{{ role }}" {% if role == 'assistant' %}checked{% endif %}>
+                                <label class="form-check-label" for="role_{{ role }}">{{ role }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="min_word_count" class="form-label">Min Word Count</label>
+                        <input type="number" class="form-control" id="min_word_count" name="min_word_count" min="1" value="5">
+                        <div class="form-text">Minimum words for content to process</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="max_words" class="form-label">Max Words in Output (optional)</label>
+                        <input type="number" class="form-control" id="max_words" name="max_words" min="1" placeholder="Limit output word count">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="limit" class="form-label">Item Limit (optional)</label>
+                        <input type="number" class="form-control" id="limit" name="limit" min="1" placeholder="Maximum items to process">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="source_provider" class="form-label">Source Provider (optional)</label>
+                        <select class="form-select" id="source_provider" name="source_provider">
+                            <option value="">Any Provider</option>
+                            {% for provider_id, provider_name in source_providers %}
+                            <option value="{{ provider_name }}">{{ provider_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Only process content from this provider</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="days" class="form-label">Days (optional)</label>
+                        <input type="number" class="form-control" id="days" name="days" min="1" placeholder="Days">
+                        <div class="form-text">Only process content from the last N days</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="prompt_template" class="form-label">Custom Prompt Template (optional)</label>
+                    <textarea class="form-control" id="prompt_template" name="prompt_template" rows="4" placeholder="Enter a custom prompt template. Use {content} as a placeholder for the target content."></textarea>
+                    <div class="form-text">If not provided, a default prompt template for the selected output type will be used.</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="override" name="override">
+                            <label class="form-check-label" for="override">
+                                Override existing outputs if they exist
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="generate_embedding" name="generate_embedding">
+                            <label class="form-check-label" for="generate_embedding">
+                                Generate embeddings for outputs
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> Batch processing may take a long time depending on the number of items and the provider used.
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('gencom.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Start Batch Processing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update output type description when changed
+    document.addEventListener('DOMContentLoaded', function() {
+        const outputTypeSelect = document.getElementById('output_type');
+        const outputDescription = document.getElementById('output_description');
+        const targetTypeSelect = document.getElementById('target_type');
+        const rolesContainer = document.getElementById('roles_container');
+        
+        // Define descriptions for each output type
+        const descriptions = {
+            {% for ot in output_types %}
+            "{{ ot.id }}": "{{ ot.description }}",
+            {% endfor %}
+        };
+        
+        // Update description initially
+        outputDescription.textContent = descriptions[outputTypeSelect.value];
+        
+        // Update description when selection changes
+        outputTypeSelect.addEventListener('change', function() {
+            outputDescription.textContent = descriptions[this.value];
+        });
+        
+        // Show/hide role selection based on target type
+        targetTypeSelect.addEventListener('change', function() {
+            if (this.value === 'message') {
+                rolesContainer.style.display = 'block';
+            } else {
+                rolesContainer.style.display = 'none';
+            }
+        });
+        
+        // Initialize role container visibility
+        if (targetTypeSelect.value !== 'message') {
+            rolesContainer.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

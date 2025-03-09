@@ -1,86 +1,435 @@
 {% extends 'layout.html' %}
 
-{% block title %}Media Files{% endblock %}
+{% block title %}Media Gallery{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+  .media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    .media-grid {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .media-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+  }
+  
+  .media-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    transition: all 0.2s ease-in-out;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    height: 230px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .media-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+    border-color: #007bff;
+  }
+  
+  .media-thumbnail-container {
+    width: 100%;
+    height: 160px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .media-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  
+  .media-card:hover .media-thumbnail {
+    transform: scale(1.05);
+  }
+  
+  .media-thumbnail .placeholder {
+    font-size: 3rem;
+    color: #adb5bd;
+  }
+  
+  .media-info {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .media-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+  
+  .media-date {
+    color: #6c757d;
+    font-size: 0.75rem;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.25em 0.5em;
+  }
+  
+  .filter-card {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .type-pill {
+    border-radius: 15px;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    margin-right: 5px;
+    background-color: #e9ecef;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  
+  .type-pill.active {
+    background-color: #007bff;
+    color: white;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="my-4">Media Files</h1>
-  
-  <div class="card mb-4">
-    <div class="card-header">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Media Library</h5>
-        <div>
-          <form class="d-flex" role="search">
-            <input class="form-control me-2" type="search" placeholder="Search media" aria-label="Search">
-            <button class="btn btn-outline-primary" type="submit">Search</button>
-          </form>
-        </div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle-fill"></i> 
-        Media content will be displayed here. This is a placeholder template while the feature is being implemented.
-      </div>
-      
-      <div class="row row-cols-1 row-cols-md-3 g-4">
-        <!-- Sample media items (placeholders) -->
-        <div class="col">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <i class="bi bi-image" style="font-size: 3rem;"></i>
-              <h5 class="card-title mt-3">Sample Image</h5>
-              <p class="card-text text-muted">image/jpeg • 1.2 MB</p>
-            </div>
-            <div class="card-footer">
-              <small class="text-muted">Uploaded on Feb 25, 2025</small>
-            </div>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h2><i class="fas fa-images"></i> Media Gallery</h2>
+          <div>
+            <a href="{{ url_for('main.index') }}" class="btn btn-light btn-sm">
+              <i class="fas fa-home"></i> Home
+            </a>
           </div>
         </div>
-        <div class="col">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <i class="bi bi-file-pdf" style="font-size: 3rem;"></i>
-              <h5 class="card-title mt-3">Sample Document</h5>
-              <p class="card-text text-muted">application/pdf • 2.5 MB</p>
+        <div class="card-body">
+          {% if api_error %}
+            <div class="alert alert-warning">
+              <h4>Error</h4>
+              <p>{{ api_error }}</p>
             </div>
-            <div class="card-footer">
-              <small class="text-muted">Uploaded on Feb 24, 2025</small>
+          {% else %}
+            <!-- Filters -->
+            <div class="filter-card">
+              <form method="get" action="{{ url_for('media.list_media') }}">
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label">Media Type</label>
+                    <select name="type" class="form-select">
+                      <option value="image" {% if current_type == 'image' %}selected{% endif %}>Images</option>
+                      <option value="audio" {% if current_type == 'audio' %}selected{% endif %}>Audio</option>
+                      <option value="video" {% if current_type == 'video' %}selected{% endif %}>Video</option>
+                      <option value="pdf" {% if current_type == 'pdf' %}selected{% endif %}>PDF</option>
+                      <option value="other" {% if current_type == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-3">
+                    <label class="form-label">Sort By</label>
+                    <select name="sort" class="form-select">
+                      <option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>Date Created</option>
+                      <option value="file_size" {% if current_sort == 'file_size' %}selected{% endif %}>File Size</option>
+                      <option value="original_file_name" {% if current_sort == 'original_file_name' %}selected{% endif %}>File Name</option>
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-2">
+                    <label class="form-label">Order</label>
+                    <select name="order" class="form-select">
+                      <option value="desc" {% if current_order == 'desc' %}selected{% endif %}>Descending</option>
+                      <option value="asc" {% if current_order == 'asc' %}selected{% endif %}>Ascending</option>
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-2">
+                    <label class="form-label">Source</label>
+                    <select name="is_generated" class="form-select">
+                      <option value="">All Sources</option>
+                      <option value="true" {% if current_is_generated == 'true' %}selected{% endif %}>AI Generated</option>
+                      <option value="false" {% if current_is_generated == 'false' %}selected{% endif %}>User Uploaded</option>
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                  </div>
+                </div>
+                
+                <!-- Conversation Search -->
+                <div class="row mt-3">
+                  <div class="col-12">
+                    <hr>
+                    <h5>Find Media by Conversation</h5>
+                  </div>
+                  <div class="col-md-10">
+                    <input type="text" id="conversation-search" class="form-control" placeholder="Enter conversation title to find related media...">
+                  </div>
+                  <div class="col-md-2">
+                    <button type="button" id="search-conversations-btn" class="btn btn-secondary w-100">Search</button>
+                  </div>
+                  <div class="col-12 mt-2" id="conversation-results">
+                    <!-- Results will appear here -->
+                  </div>
+                </div>
+              </form>
             </div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <i class="bi bi-filetype-json" style="font-size: 3rem;"></i>
-              <h5 class="card-title mt-3">Sample Data</h5>
-              <p class="card-text text-muted">application/json • 15 KB</p>
+            
+            <!-- Media Types Pills -->
+            <div class="d-flex mb-3">
+              {% for type in media_types %}
+                <a href="{{ url_for('media.list_media', type=type.type) }}" 
+                   class="type-pill {% if current_type == type.type %}active{% endif %}">
+                  {{ type.type }} ({{ type.count }})
+                </a>
+              {% endfor %}
             </div>
-            <div class="card-footer">
-              <small class="text-muted">Uploaded on Feb 23, 2025</small>
-            </div>
-          </div>
+            
+            {% if media_items %}
+              <!-- Media Grid -->
+              <div class="media-grid">
+                {% for item in media_items %}
+                  <div class="media-card">
+                    <a href="{{ item.detail_url }}" class="text-decoration-none">
+                      <div class="media-thumbnail-container">
+                        {% if item.media_type == 'image' %}
+                          <img 
+                            src="{{ config.API_URL|default('http://localhost:8000') }}/api/media/{{ item.id }}/thumbnail" 
+                            alt="{{ item.original_file_name|default('Image') }}" 
+                            loading="lazy" 
+                            class="media-thumbnail"
+                            crossorigin="anonymous"
+                          >
+                        {% else %}
+                          <div class="placeholder d-flex flex-column align-items-center justify-content-center h-100">
+                            <i class="fas fa-{{ item.icon }} fa-3x mb-2"></i>
+                            <small class="text-muted">{{ item.media_type|upper }}</small>
+                          </div>
+                        {% endif %}
+                      </div>
+                      
+                      <div class="media-info">
+                        <div class="media-name" title="{{ item.original_file_name or 'Untitled' }}">
+                          {{ item.original_file_name or 'Untitled' }}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                          <span class="badge {% if item.is_generated %}bg-success{% else %}bg-info{% endif %}">
+                            {% if item.is_generated %}AI Generated{% else %}Uploaded{% endif %}
+                          </span>
+                          <span class="media-date">
+                            {{ item.created_at|datetime }}
+                          </span>
+                        </div>
+                      </div>
+                    </a>
+                  </div>
+                {% endfor %}
+              </div>
+              
+              <!-- Pagination -->
+              {% if pagination and pagination.pages > 1 %}
+                <nav aria-label="Media pagination" class="mt-4">
+                  <ul class="pagination justify-content-center">
+                    {% if pagination.page > 1 %}
+                      <li class="page-item">
+                        <a class="page-link" href="{{ url_for('media.list_media', type=current_type, sort=current_sort, order=current_order, is_generated=current_is_generated, page=pagination.page-1, per_page=pagination.per_page) }}">
+                          Previous
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">Previous</span>
+                      </li>
+                    {% endif %}
+                    
+                    {# Calculate page range manually #}
+                    {% set start_page = pagination.page - 2 if pagination.page - 2 > 0 else 1 %}
+                    {% set end_page = pagination.page + 2 if pagination.page + 2 < pagination.pages else pagination.pages %}
+                    
+                    {% for page_num in range(start_page, end_page + 1) %}
+                      <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('media.list_media', type=current_type, sort=current_sort, order=current_order, is_generated=current_is_generated, page=page_num, per_page=pagination.per_page) }}">
+                          {{ page_num }}
+                        </a>
+                      </li>
+                    {% endfor %}
+                    
+                    {% if pagination.page < pagination.pages %}
+                      <li class="page-item">
+                        <a class="page-link" href="{{ url_for('media.list_media', type=current_type, sort=current_sort, order=current_order, is_generated=current_is_generated, page=pagination.page+1, per_page=pagination.per_page) }}">
+                          Next
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">Next</span>
+                      </li>
+                    {% endif %}
+                  </ul>
+                </nav>
+              {% endif %}
+            {% else %}
+              <div class="alert alert-info">
+                <h4>No Media Found</h4>
+                <p>No media items match your current filters. Try changing the filters or try a different media type.</p>
+              </div>
+            {% endif %}
+          {% endif %}
         </div>
       </div>
-      
-      <!-- Pagination -->
-      <nav aria-label="Media pagination" class="mt-4">
-        <ul class="pagination justify-content-center">
-          <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
-          </li>
-          <li class="page-item active" aria-current="page">
-            <a class="page-link" href="#">1</a>
-          </li>
-          <li class="page-item"><a class="page-link" href="#">2</a></li>
-          <li class="page-item"><a class="page-link" href="#">3</a></li>
-          <li class="page-item">
-            <a class="page-link" href="#">Next</a>
-          </li>
-        </ul>
-      </nav>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Fix image loading errors with better error handling
+    document.querySelectorAll('.media-thumbnail img').forEach(function(img) {
+      img.onerror = function() {
+        // Extract media ID for logging
+        let mediaId = 'unknown';
+        try {
+          // Try to extract media ID from src URL
+          const urlParts = this.src.split('/');
+          mediaId = urlParts[urlParts.length - 2]; // Should be the ID in .../media/{id}/file
+        } catch (e) {
+          console.error('Error extracting media ID:', e);
+        }
+        
+        console.error('Failed to load image:', this.src, 'media ID:', mediaId);
+        
+        // Replace with placeholder icon when image fails to load
+        const parent = this.parentNode;
+        parent.innerHTML = `
+          <div class="placeholder d-flex flex-column align-items-center justify-content-center">
+            <i class="fas fa-image fa-3x mb-2"></i>
+            <small class="text-muted">Image unavailable</small>
+          </div>
+        `;
+      };
+      
+      // Add loading attribute for performance
+      img.loading = 'lazy';
+      
+      // Add a nice fade-in effect when images load
+      img.style.opacity = '0';
+      img.onload = function() {
+        // Gradually fade in the image when it loads
+        let opacity = 0;
+        const interval = setInterval(() => {
+          if (opacity >= 1) {
+            clearInterval(interval);
+          }
+          img.style.opacity = opacity;
+          opacity += 0.1;
+        }, 30);
+      };
+    });
+    
+    // Conversation search functionality
+    const searchInput = document.getElementById('conversation-search');
+    const searchButton = document.getElementById('search-conversations-btn');
+    const resultsContainer = document.getElementById('conversation-results');
+    
+    searchButton.addEventListener('click', function() {
+      const searchTerm = searchInput.value.trim();
+      if (searchTerm.length < 3) {
+        resultsContainer.innerHTML = '<div class="alert alert-warning">Please enter at least 3 characters</div>';
+        return;
+      }
+      
+      resultsContainer.innerHTML = '<div class="d-flex justify-content-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+      
+      // Search conversations via API - using XHR for better browser compatibility
+      const apiUrl = "{{ config.API_URL|default('http://localhost:8000') }}";
+      const searchUrl = `${apiUrl}/api/search/conversations?q=${encodeURIComponent(searchTerm)}&limit=5`;
+      console.log('Searching with URL:', searchUrl);
+      
+      // Create a new XHR request 
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', searchUrl);
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          // Handle successful response
+          if (!data.results || data.results.length === 0) {
+            resultsContainer.innerHTML = '<div class="alert alert-info">No conversations found matching your search</div>';
+            return;
+          }
+          
+          // Create list of conversation links
+          let html = '<div class="list-group mt-2">';
+          data.results.forEach(conv => {
+            html += `
+              <a href="/media/by-conversation/${conv.id}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">${conv.title || 'Untitled Conversation'}</h6>
+                  <small>${new Date(conv.created_at).toLocaleDateString()}</small>
+                </div>
+                <small>Click to view all media in this conversation</small>
+              </a>
+            `;
+          });
+          html += '</div>';
+          
+          resultsContainer.innerHTML = html;
+        } else {
+          console.error('Error searching conversations:', xhr.status, xhr.statusText);
+          resultsContainer.innerHTML = `<div class="alert alert-danger">Error searching conversations: ${xhr.status} ${xhr.statusText}</div>`;
+        }
+      };
+      xhr.onerror = function() {
+        console.error('Network error when searching conversations');
+        resultsContainer.innerHTML = '<div class="alert alert-danger">Network error when searching conversations</div>';
+      };
+      xhr.send();
+    });
+    
+    // Allow pressing Enter in search field
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        searchButton.click();
+      }
+    });
+  });
+</script>
 {% endblock %}
